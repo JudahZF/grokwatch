@@ -1,0 +1,71 @@
+# Xcode project spec. Regenerate with: cd watch && xcodegen
+name: GrokWatch
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    watchOS: "10.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+packages:
+  SwiftProtobuf:
+    url: https://github.com/apple/swift-protobuf
+    exactVersion: 1.39.0 # must match the protoc-gen-swift that produced Generated/
+  QRCodeGenerator:
+    url: https://github.com/fwcd/swift-qrcode-generator
+    from: 2.0.2
+targets:
+  GrokWatch:
+    type: application
+    platform: watchOS
+    sources: [GrokWatch, Shared]
+    dependencies:
+      - package: SwiftProtobuf
+      - package: QRCodeGenerator
+      - target: GrokWatchWidgets
+    entitlements:
+      path: GrokWatch/GrokWatch.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.example.grokwatch]
+    info:
+      path: GrokWatch/Info.plist
+      properties:
+        CFBundleDisplayName: Grokwatch
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        WKApplication: true
+        WKWatchOnly: true
+        NSMicrophoneUsageDescription: Grokwatch uses the microphone for voice calls with your Bots.
+        UIBackgroundModes: [voip] # CallKit reads this; watchOS only allows the call's WebSocket during a call
+        BGTaskSchedulerPermittedIdentifiers: [glance] # AppSession.refreshID
+        CFBundleURLTypes:
+          - CFBundleURLName: com.example.grokwatch
+            CFBundleURLSchemes: [grokwatch]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.grokwatch
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+  # Complication. Reads the unread snapshot the app writes to the App Group (Shared/Glance.swift).
+  GrokWatchWidgets:
+    type: app-extension
+    platform: watchOS
+    sources: [Widgets, Shared]
+    entitlements:
+      path: Widgets/GrokWatchWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.example.grokwatch]
+    info:
+      path: Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: Grokwatch
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.grokwatch.widgets

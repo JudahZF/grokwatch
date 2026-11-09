@@ -1,0 +1,1040 @@
+// Message and service definitions for the Grok Bot client API, derived from the official desktop app. Unofficial; may change on any app update.
+// Connect protocol, binary proto, base URL https://api2.cursor.sh. See docs/grok-bot-protocol.md.
+syntax = "proto3";
+package aiserver.v1;
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+enum GrokBotAgentKind {
+  GROK_BOT_AGENT_KIND_UNSPECIFIED = 0;
+  GROK_BOT_AGENT_KIND_AGENT = 1;
+  GROK_BOT_AGENT_KIND_ROOM = 2;
+}
+enum GrokBotAgentViewerAccess {
+  GROK_BOT_AGENT_VIEWER_ACCESS_UNSPECIFIED = 0;
+  GROK_BOT_AGENT_VIEWER_ACCESS_DIRECT = 1;
+  GROK_BOT_AGENT_VIEWER_ACCESS_GROUP = 2;
+  GROK_BOT_AGENT_VIEWER_ACCESS_TEAM = 3;
+}
+enum GrokBotAgentViewerAction {
+  GROK_BOT_AGENT_VIEWER_ACTION_UNSPECIFIED = 0;
+  GROK_BOT_AGENT_VIEWER_ACTION_SHARE_IN_PLACE = 1;
+  GROK_BOT_AGENT_VIEWER_ACTION_MANAGE_CREDENTIALS = 2;
+}
+enum GrokBotAgentVisibility {
+  GROK_BOT_AGENT_VISIBILITY_UNSPECIFIED = 0;
+  GROK_BOT_AGENT_VISIBILITY_OWNER = 1;
+  GROK_BOT_AGENT_VISIBILITY_TEAM = 2;
+}
+enum GrokBotAttachmentReadOutcome {
+  GROK_BOT_ATTACHMENT_READ_OUTCOME_UNSPECIFIED = 0;
+  GROK_BOT_ATTACHMENT_READ_OUTCOME_STORE = 1;
+  GROK_BOT_ATTACHMENT_READ_OUTCOME_NOT_IN_STORE = 2;
+  GROK_BOT_ATTACHMENT_READ_OUTCOME_NO_STORAGE = 3;
+}
+enum GrokBotAutoReviewApprovalResolution {
+  GROK_BOT_AUTO_REVIEW_APPROVAL_RESOLUTION_UNSPECIFIED = 0;
+  GROK_BOT_AUTO_REVIEW_APPROVAL_RESOLUTION_APPROVED = 1;
+  GROK_BOT_AUTO_REVIEW_APPROVAL_RESOLUTION_DENIED = 2;
+  GROK_BOT_AUTO_REVIEW_APPROVAL_RESOLUTION_ALWAYS = 3;
+}
+enum GrokBotAutoReviewRuleSaveSurface {
+  GROK_BOT_AUTO_REVIEW_RULE_SAVE_SURFACE_UNSPECIFIED = 0;
+  GROK_BOT_AUTO_REVIEW_RULE_SAVE_SURFACE_DRAFT_CARD = 1;
+  GROK_BOT_AUTO_REVIEW_RULE_SAVE_SURFACE_APPROVAL_CARD = 2;
+  GROK_BOT_AUTO_REVIEW_RULE_SAVE_SURFACE_SETTINGS = 3;
+  GROK_BOT_AUTO_REVIEW_RULE_SAVE_SURFACE_CHAT_CARD = 4;
+}
+enum GrokBotAutoReviewRuleTextSource {
+  GROK_BOT_AUTO_REVIEW_RULE_TEXT_SOURCE_UNSPECIFIED = 0;
+  GROK_BOT_AUTO_REVIEW_RULE_TEXT_SOURCE_SERVER_PROPOSAL = 1;
+  GROK_BOT_AUTO_REVIEW_RULE_TEXT_SOURCE_AGENT_FALLBACK = 2;
+  GROK_BOT_AUTO_REVIEW_RULE_TEXT_SOURCE_USER_TYPED = 3;
+  GROK_BOT_AUTO_REVIEW_RULE_TEXT_SOURCE_RECIPIENTS_RULE = 4;
+  GROK_BOT_AUTO_REVIEW_RULE_TEXT_SOURCE_CHAT_REQUEST = 5;
+}
+enum GrokBotAutomationPolicyAction {
+  GROK_BOT_AUTOMATION_POLICY_ACTION_UNSPECIFIED = 0;
+  GROK_BOT_AUTOMATION_POLICY_ACTION_CREATE = 1;
+  GROK_BOT_AUTOMATION_POLICY_ACTION_CHANGE_POLICY = 2;
+}
+enum GrokBotBoxDiskPressureLevel {
+  GROK_BOT_BOX_DISK_PRESSURE_LEVEL_UNSPECIFIED = 0;
+  GROK_BOT_BOX_DISK_PRESSURE_LEVEL_NONE = 1;
+  GROK_BOT_BOX_DISK_PRESSURE_LEVEL_SOFT = 2;
+  GROK_BOT_BOX_DISK_PRESSURE_LEVEL_HARD = 3;
+}
+enum GrokBotClientSurface {
+  GROK_BOT_CLIENT_SURFACE_UNSPECIFIED = 0;
+  GROK_BOT_CLIENT_SURFACE_DESKTOP = 1;
+  GROK_BOT_CLIENT_SURFACE_MOBILE = 2;
+  GROK_BOT_CLIENT_SURFACE_GLASS = 3;
+}
+enum GrokBotEmailProvider {
+  GROK_BOT_EMAIL_PROVIDER_UNSPECIFIED = 0;
+  GROK_BOT_EMAIL_PROVIDER_GOOGLE = 1;
+  GROK_BOT_EMAIL_PROVIDER_MICROSOFT = 2;
+}
+enum GrokBotRosterChangeKind {
+  GROK_BOT_ROSTER_CHANGE_KIND_UNSPECIFIED = 0;
+  GROK_BOT_ROSTER_CHANGE_KIND_AGENT_CREATED = 1;
+  GROK_BOT_ROSTER_CHANGE_KIND_AGENT_UPDATED = 2;
+  GROK_BOT_ROSTER_CHANGE_KIND_AGENT_DELETED = 3;
+  GROK_BOT_ROSTER_CHANGE_KIND_AGENT_VISIBILITY_CHANGED = 4;
+  GROK_BOT_ROSTER_CHANGE_KIND_ROOM_MEMBERS_CHANGED = 5;
+  GROK_BOT_ROSTER_CHANGE_KIND_SIDEBAR_VISIBILITY_CHANGED = 6;
+  GROK_BOT_ROSTER_CHANGE_KIND_USER_SETTINGS_CHANGED = 7;
+}
+enum GrokBotSendSource {
+  GROK_BOT_SEND_SOURCE_UNSPECIFIED = 0;
+  GROK_BOT_SEND_SOURCE_CHAT = 1;
+  GROK_BOT_SEND_SOURCE_PUSH = 2;
+  GROK_BOT_SEND_SOURCE_APP_INTENT = 3;
+  GROK_BOT_SEND_SOURCE_ACTION_BUTTON_DICTATION = 4;
+}
+enum GrokBotSendStatus {
+  GROK_BOT_SEND_STATUS_UNSPECIFIED = 0;
+  GROK_BOT_SEND_STATUS_NOT_FOUND = 1;
+  GROK_BOT_SEND_STATUS_ACCEPTED = 2;
+  GROK_BOT_SEND_STATUS_REJECTED = 3;
+  GROK_BOT_SEND_STATUS_PENDING = 4;
+  GROK_BOT_SEND_STATUS_UNKNOWN_DURABILITY = 5;
+}
+enum GrokBotTeamsInstallState {
+  GROK_BOT_TEAMS_INSTALL_STATE_UNSPECIFIED = 0;
+  GROK_BOT_TEAMS_INSTALL_STATE_NOT_CONNECTED = 1;
+  GROK_BOT_TEAMS_INSTALL_STATE_CONNECTED = 2;
+  GROK_BOT_TEAMS_INSTALL_STATE_APP_CREATED = 3;
+  GROK_BOT_TEAMS_INSTALL_STATE_PENDING_ADMIN_APPROVAL = 4;
+  GROK_BOT_TEAMS_INSTALL_STATE_INSTALLED = 5;
+  GROK_BOT_TEAMS_INSTALL_STATE_UPDATE_PENDING = 6;
+  GROK_BOT_TEAMS_INSTALL_STATE_REMOVED_IN_TEAMS = 7;
+  GROK_BOT_TEAMS_INSTALL_STATE_REMOVED = 8;
+  GROK_BOT_TEAMS_INSTALL_STATE_UNSUPPORTED_HARNESS = 9;
+  GROK_BOT_TEAMS_INSTALL_STATE_NOT_PUBLISHED = 10;
+  GROK_BOT_TEAMS_INSTALL_STATE_UNAVAILABLE = 11;
+  GROK_BOT_TEAMS_INSTALL_STATE_PROVISIONING = 12;
+}
+enum GrokBotTemporalHarnessMode {
+  GROK_BOT_TEMPORAL_HARNESS_MODE_UNSPECIFIED = 0;
+  GROK_BOT_TEMPORAL_HARNESS_MODE_OFF = 1;
+  GROK_BOT_TEMPORAL_HARNESS_MODE_SHADOW = 2;
+  GROK_BOT_TEMPORAL_HARNESS_MODE_LIVE = 3;
+  GROK_BOT_TEMPORAL_HARNESS_MODE_BOX = 4;
+}
+enum GrokBotToolPermission {
+  GROK_BOT_TOOL_PERMISSION_UNSPECIFIED = 0;
+  GROK_BOT_TOOL_PERMISSION_ALWAYS_ALLOW = 1;
+  GROK_BOT_TOOL_PERMISSION_NEEDS_APPROVAL = 2;
+  GROK_BOT_TOOL_PERMISSION_BLOCKED = 3;
+}
+enum GrokBotTurnFailureAccount {
+  GROK_BOT_TURN_FAILURE_ACCOUNT_UNSPECIFIED = 0;
+  GROK_BOT_TURN_FAILURE_ACCOUNT_OWNER = 1;
+  GROK_BOT_TURN_FAILURE_ACCOUNT_ACTING_USER = 2;
+  GROK_BOT_TURN_FAILURE_ACCOUNT_TEAM_SERVICE_ACCOUNT = 3;
+}
+enum GrokBotTurnFailureCode {
+  GROK_BOT_TURN_FAILURE_CODE_UNSPECIFIED = 0;
+  GROK_BOT_TURN_FAILURE_CODE_INTERNAL = 1;
+  GROK_BOT_TURN_FAILURE_CODE_TIMEOUT = 2;
+  GROK_BOT_TURN_FAILURE_CODE_USAGE_LIMIT = 3;
+  GROK_BOT_TURN_FAILURE_CODE_RATE_LIMIT = 4;
+  GROK_BOT_TURN_FAILURE_CODE_TEAM_POLICY_UNAVAILABLE = 5;
+  GROK_BOT_TURN_FAILURE_CODE_UNPAID_INVOICE = 6;
+  GROK_BOT_TURN_FAILURE_CODE_PROVIDER_CONTENT_BLOCKED = 7;
+  GROK_BOT_TURN_FAILURE_CODE_BOX_UPDATING = 8;
+}
+enum GrokBotUserFormClientPlatform {
+  GROK_BOT_USER_FORM_CLIENT_PLATFORM_UNSPECIFIED = 0;
+  GROK_BOT_USER_FORM_CLIENT_PLATFORM_DESKTOP = 1;
+  GROK_BOT_USER_FORM_CLIENT_PLATFORM_IOS = 2;
+  GROK_BOT_USER_FORM_CLIENT_PLATFORM_ANDROID = 3;
+}
+enum GrokBotUserFormDismissMode {
+  GROK_BOT_USER_FORM_DISMISS_MODE_UNSPECIFIED = 0;
+  GROK_BOT_USER_FORM_DISMISS_MODE_DISMISSED = 1;
+  GROK_BOT_USER_FORM_DISMISS_MODE_ESCALATED = 2;
+}
+enum GrokBotUserFormVaultTarget {
+  GROK_BOT_USER_FORM_VAULT_TARGET_UNSPECIFIED = 0;
+  GROK_BOT_USER_FORM_VAULT_TARGET_PERSONAL = 1;
+  GROK_BOT_USER_FORM_VAULT_TARGET_AGENT = 2;
+}
+enum GrokBotUserMessageDelivery {
+  GROK_BOT_USER_MESSAGE_DELIVERY_UNSPECIFIED = 0;
+  GROK_BOT_USER_MESSAGE_DELIVERY_ACCEPTED_BOX = 1;
+  GROK_BOT_USER_MESSAGE_DELIVERY_ACCEPTED_TEMPORAL = 2;
+  GROK_BOT_USER_MESSAGE_DELIVERY_DUPLICATE = 3;
+  GROK_BOT_USER_MESSAGE_DELIVERY_REFUSED = 4;
+}
+enum GrokBotUserMessageInitiator {
+  GROK_BOT_USER_MESSAGE_INITIATOR_UNSPECIFIED = 0;
+  GROK_BOT_USER_MESSAGE_INITIATOR_USER = 1;
+  GROK_BOT_USER_MESSAGE_INITIATOR_TEMPLATE_IMPORT = 2;
+  GROK_BOT_USER_MESSAGE_INITIATOR_TEMPLATE_SHARE = 3;
+  GROK_BOT_USER_MESSAGE_INITIATOR_CARD_ACTION = 4;
+  GROK_BOT_USER_MESSAGE_INITIATOR_PLUGIN_SETUP = 5;
+  GROK_BOT_USER_MESSAGE_INITIATOR_TEACH_RECORDING = 6;
+}
+enum GrokBotUserSettingsField {
+  GROK_BOT_USER_SETTINGS_FIELD_UNSPECIFIED = 0;
+  GROK_BOT_USER_SETTINGS_FIELD_MCP_SERVERS = 1;
+  GROK_BOT_USER_SETTINGS_FIELD_TIME_ZONE = 2;
+  GROK_BOT_USER_SETTINGS_FIELD_AUTO_REVIEW = 3;
+  GROK_BOT_USER_SETTINGS_FIELD_PINNED_AGENTS = 4;
+  GROK_BOT_USER_SETTINGS_FIELD_SIDEBAR_SECTIONS = 5;
+  GROK_BOT_USER_SETTINGS_FIELD_HAS_SEEN_ONBOARDING = 6;
+  GROK_BOT_USER_SETTINGS_FIELD_MAIN_AGENT = 7;
+  GROK_BOT_USER_SETTINGS_FIELD_X_TOOL_ACCESS = 8;
+  GROK_BOT_USER_SETTINGS_FIELD_JOB_ROLE = 9;
+  GROK_BOT_USER_SETTINGS_FIELD_LIBRARY_PINS = 10;
+}
+enum GrokBotXToolAccess {
+  GROK_BOT_XTOOL_ACCESS_UNSPECIFIED = 0;
+  GROK_BOT_XTOOL_ACCESS_OWN = 1;
+  GROK_BOT_XTOOL_ACCESS_SHARED = 2;
+}
+enum SandBoxRunState {
+  SAND_BOX_RUN_STATE_UNSPECIFIED = 0;
+  SAND_BOX_RUN_STATE_ABSENT = 1;
+  SAND_BOX_RUN_STATE_HIBERNATED = 2;
+  SAND_BOX_RUN_STATE_RUNNING = 3;
+  SAND_BOX_RUN_STATE_STARTING = 4;
+}
+enum SandVoiceCallStartSurface {
+  SAND_VOICE_CALL_START_SURFACE_UNSPECIFIED = 0;
+  SAND_VOICE_CALL_START_SURFACE_DESKTOP_BUTTON = 1;
+  SAND_VOICE_CALL_START_SURFACE_MOBILE_BUTTON = 2;
+  SAND_VOICE_CALL_START_SURFACE_DEEP_LINK = 3;
+  SAND_VOICE_CALL_START_SURFACE_SIRI = 4;
+  SAND_VOICE_CALL_START_SURFACE_SHORTCUT = 5;
+  SAND_VOICE_CALL_START_SURFACE_ONBOARDING_CARD = 6;
+}
+enum VoiceCallHarnessToolOutcomeKind {
+  VOICE_CALL_HARNESS_TOOL_OUTCOME_KIND_UNSPECIFIED = 0;
+  VOICE_CALL_HARNESS_TOOL_OUTCOME_KIND_SERVED = 1;
+  VOICE_CALL_HARNESS_TOOL_OUTCOME_KIND_UNKNOWN_TOOL = 2;
+  VOICE_CALL_HARNESS_TOOL_OUTCOME_KIND_INVALID_INPUT = 3;
+}
+message ListGrokBotAgentsRequest {
+  optional string role = 1;
+  optional bool include_team_agents = 2;
+  optional bool added_team_agents_only = 3;
+}
+message ListGrokBotAgentsResponse {
+  repeated GrokBotAgent agents = 1;
+  repeated GrokBotSlackConnection slack_connections = 2;
+  bool truncated = 3;
+  repeated GrokBotTeamsConnection teams_connections = 4;
+}
+message GrokBotAgent {
+  string id = 1;
+  string legacy_agent_id = 2;
+  string name = 3;
+  string description = 4;
+  string title = 5;
+  string avatar_shape = 6;
+  string avatar_color = 7;
+  optional string avatar_version = 8;
+  optional string avatar_url = 9;
+  int64 created_at_ms = 10;
+  int64 updated_at_ms = 11;
+  string agent_id = 12;
+  string harness = 13;
+  string role = 14;
+  optional GrokBotAgentVisibility visibility = 15;
+  optional int32 team_id = 16;
+  optional bool viewer_is_owner = 17;
+  string viewer_session_id = 18;
+  GrokBotAgentKind kind = 19;
+  repeated string member_agent_ids = 20;
+  optional string owner_display_name = 21;
+  repeated GrokBotRoomPerson people = 22;
+  optional google.protobuf.Timestamp published_at = 23;
+  bool team_default_for_viewer = 24;
+  optional string voice_id = 25;
+  optional float voice_speed = 26;
+  optional string voice_language = 27;
+  optional bool viewer_can_manage = 28;
+  optional bool drafting_disabled = 29;
+  optional GrokBotAgentRoutinePolicy routine_policy = 30;
+  optional GrokBotAgentViewerAccess viewer_access = 31;
+  optional bool access_grants_only = 32;
+  repeated GrokBotAgentViewerAction viewer_allowed_actions = 33;
+  repeated GrokBotAgentSuggestion suggestions = 34;
+  optional bool access_owner_only = 35;
+}
+message GrokBotRoomPerson {
+  string display_name = 1;
+  optional string avatar_url = 2;
+  bool is_viewer = 3;
+  optional int32 user_id = 4;
+}
+message GrokBotAgentRoutinePolicy {
+  bool allow_collaborator_creation = 1;
+  repeated GrokBotAutomationPolicyAction viewer_allowed_actions = 2;
+}
+message GrokBotAgentSuggestion {
+  string id = 1;
+  string icon = 2;
+  string title = 3;
+  string detail = 4;
+  string prompt = 5;
+}
+message GrokBotSlackConnection {
+  string agent_id = 1;
+  bool connected = 2;
+  optional string workspace_name = 3;
+  optional string install_url = 5;
+  optional string unavailable_reason = 6;
+  optional bool pending_admin_approval = 7;
+  optional bool needs_manifest_update = 8;
+  optional string reinstall_url = 9;
+  optional bool approval_denied = 10;
+  optional bool app_unreachable = 11;
+  optional bool removed_in_slack = 12;
+  optional bool approval_request_unsent = 13;
+}
+message GrokBotTeamsConnection {
+  string agent_id = 1;
+  GrokBotTeamsInstallState install_state = 2;
+  optional string tenant_id = 3;
+  optional string tenant_display_name = 4;
+  int32 installed_team_count = 5;
+  repeated GrokBotTeamsInstalledTeam installed_teams = 6;
+}
+message GrokBotTeamsInstalledTeam {
+  string team_id = 1;
+  string display_name = 2;
+  bool rsc_granted = 3;
+  int64 installed_at_ms = 4;
+}
+message SendGrokBotUserMessageRequest {
+  string agent_id = 1;
+  string message_id = 2;
+  string text = 3;
+  int64 sent_at_ms = 4;
+  optional string rich_text = 5;
+  optional string reply_to_id = 6;
+  bool is_fork = 7;
+  optional string reply_quote = 24;
+  repeated string attachment_paths = 8;
+  repeated string attachment_names = 9;
+  optional string traceparent = 10;
+  optional int64 enter_epoch_ms = 11;
+  optional int64 composed_at_ms = 12;
+  GrokBotClientSurface source = 13;
+  optional string mcp_config_json = 14;
+  string session_id = 15;
+  optional string machine_id = 16;
+  optional bool one_password_app_installed = 17;
+  GrokBotUserMessageInitiator initiator = 18;
+  optional string task_id = 19;
+  optional string language = 20;
+  GrokBotSendSource send_source = 21;
+  optional int64 first_sent_age_ms = 22;
+  optional bool renders_mcp_elicitation_forms = 25;
+}
+message SendGrokBotUserMessageResponse {
+  bool dispatched = 1;
+  GrokBotTemporalHarnessMode mode = 2;
+  optional string workflow_id = 3;
+  GrokBotUserMessageDelivery delivery = 4;
+  optional GrokBotHarnessRefusal refusal = 5;
+}
+message GrokBotHarnessRefusal {
+  string failure_code = 1;
+  string message = 2;
+}
+message GetGrokBotSendStatusRequest {
+  string agent_id = 1;
+  string message_id = 2;
+  string session_id = 3;
+  optional int64 first_sent_age_ms = 4;
+  optional string task_id = 5;
+}
+message GetGrokBotSendStatusResponse {
+  GrokBotSendStatus status = 1;
+  optional string echo_entry_id = 2;
+  optional string rejection_code = 3;
+  optional int64 accepted_at_ms = 4;
+}
+message ListGrokBotTranscriptEntriesRequest {
+  string agent_id = 1;
+  optional uint32 generation = 2;
+  optional uint64 before_seq = 3;
+  uint32 limit = 4;
+  string session_id = 5;
+  optional int64 unread_boundary_ms = 6;
+}
+message ListGrokBotTranscriptEntriesResponse {
+  repeated GrokBotTranscriptEntry entries = 1;
+  uint32 generation = 2;
+  repeated string cloud_agent_peer_ids = 3;
+  bool cloud_agent_peer_ids_known = 4;
+  optional GrokBotTranscriptUnreadAnchor unread_anchor = 5;
+  bool updated_seq_locked = 6;
+}
+message GrokBotTranscriptEntry {
+  uint64 seq = 1;
+  string entry_kind = 2;
+  optional bytes body = 3;
+  optional string blob_hash = 4;
+  uint64 updated_seq = 5;
+  optional string entry_id = 6;
+  bool body_omitted = 7;
+}
+message GrokBotTranscriptUnreadAnchor {
+  bool has_newer_rows = 1;
+  string entry_id = 2;
+  uint64 seq = 3;
+  uint32 newer_rows = 4;
+}
+message WatchGrokBotTranscriptsRequest {
+  repeated GrokBotTranscriptCursor cursors = 1;
+  optional bool include_unlisted_agents = 2;
+  uint32 inline_body_max_bytes = 3;
+}
+message GrokBotTranscriptCursor {
+  string agent_id = 1;
+  uint32 generation = 2;
+  uint64 after_updated_seq = 3;
+  string session_id = 4;
+}
+message GrokBotTranscriptWatchFrame {
+  oneof frame {
+    GrokBotTranscriptWatchConnected connected = 1;
+    GrokBotTranscriptWatchRows rows = 2;
+    GrokBotTranscriptWatchCleared cleared = 3;
+    GrokBotTranscriptWatchCursorTooOld cursor_too_old = 4;
+    GrokBotTranscriptWatchHeartbeat heartbeat = 5;
+    GrokBotTranscriptWatchAgentState agent_state = 6;
+    GrokBotTranscriptWatchComputerActions computer_actions = 7;
+    GrokBotTranscriptWatchAgentStateChanged agent_state_changed = 8;
+    GrokBotTranscriptWatchTurnFailed turn_failed = 9;
+    GrokBotTranscriptWatchRosterChanged roster_changed = 10;
+    GrokBotTranscriptWatchBoxState box_state = 11;
+    GrokBotTranscriptWatchPageTitleChanged page_title_changed = 12;
+  }
+}
+message GrokBotTranscriptWatchConnected {
+  string stream_id = 1;
+  int64 server_time_ms = 2;
+  int64 absolute_lifetime_ms = 3;
+}
+message GrokBotTranscriptWatchRows {
+  string agent_id = 1;
+  uint32 generation = 2;
+  repeated GrokBotTranscriptEntry entries = 3;
+  repeated GrokBotTranscriptEntryDelete deletes = 4;
+  bool replay = 5;
+  string session_id = 6;
+}
+message GrokBotTranscriptEntryDelete {
+  uint64 seq = 1;
+  uint64 updated_seq = 2;
+  optional string entry_id = 3;
+}
+message GrokBotTranscriptWatchCleared {
+  string agent_id = 1;
+  uint32 new_generation = 2;
+  string session_id = 3;
+}
+message GrokBotTranscriptWatchCursorTooOld {
+  string agent_id = 1;
+  uint32 generation = 2;
+  string session_id = 3;
+}
+message GrokBotTranscriptWatchHeartbeat {
+  int64 server_time_ms = 1;
+}
+message GrokBotTranscriptWatchAgentState {
+  repeated GrokBotAgentLiveState live = 1;
+  bool snapshot = 2;
+  repeated GrokBotAgentClientState client = 3;
+}
+message GrokBotAgentLiveState {
+  string agent_id = 1;
+  bool is_running = 2;
+  bool is_composing_message = 3;
+  bool is_retrying = 4;
+  optional GrokBotAgentLiveActivity activity = 5;
+  optional GrokBotAgentAwaitingState awaiting = 6;
+  int64 updated_at_ms = 7;
+  int64 stale_after_ms = 8;
+  optional string box_handoff_request_id = 9;
+  optional string box_handoff_instruction = 10;
+  string session_id = 11;
+  optional string active_group_member_id = 12;
+  bool has_running_subagents = 13;
+  optional string surface_task_id = 14;
+  repeated string working_task_ids = 15;
+  optional GrokBotTurnSettlement last_turn_settlement = 16;
+}
+message GrokBotAgentLiveActivity {
+  string kind = 1;
+  string tool = 2;
+  string detail = 3;
+  string target = 4;
+  string call_id = 5;
+}
+message GrokBotAgentAwaitingState {
+  string tab_id = 1;
+  string reason = 2;
+  int64 since_ms = 3;
+}
+message GrokBotTurnSettlement {
+  string turn_id = 1;
+  string outcome = 2;
+  int64 settled_at_ms = 3;
+}
+message GrokBotAgentClientState {
+  string agent_id = 1;
+  optional int64 last_viewed_at_ms = 2;
+  uint32 unread_count = 3;
+  optional int64 last_activity_at_ms = 4;
+  optional string last_entry_id = 5;
+  optional string last_entry_kind = 6;
+  optional string last_message_id = 7;
+  optional string last_message_preview = 8;
+  bool notifications_enabled = 9;
+  bool notify_on_updates_enabled = 10;
+  bool hidden_from_sidebar = 11;
+  int64 updated_at_ms = 12;
+  optional GrokBotAgentEntryPreview last_entry_preview = 13;
+  optional string last_message_task_id = 14;
+  optional bool removed_from_sidebar = 15;
+  uint32 unread_thread_count = 16;
+}
+message GrokBotAgentEntryPreview {
+  oneof preview {
+    GrokBotAgentEntryPreview_Text text = 1;
+    GrokBotAgentEntryPreview_AgentMessage sent_agent_message = 2;
+    GrokBotAgentEntryPreview_AgentMessage received_agent_message = 3;
+    GrokBotAgentEntryPreview_Attachments attachments = 4;
+    GrokBotAgentEntryPreview_Link link = 5;
+    GrokBotAgentEntryPreview_WidgetPrompt widget_prompt = 6;
+    GrokBotAgentEntryPreview_WidgetAnswered widget_answered = 7;
+    GrokBotAgentEntryPreview_WidgetOptions widget_options = 8;
+  }
+}
+message GrokBotAgentEntryPreview_Text {
+  string text = 1;
+  optional string copy_json = 2;
+}
+message GrokBotAgentEntryPreview_AgentMessage {
+  string peer_name = 1;
+  string text = 2;
+}
+message GrokBotAgentEntryPreview_Attachments {
+  uint32 count = 1;
+  repeated GrokBotAgentEntryPreview_AttachmentKindCount kinds = 2;
+}
+message GrokBotAgentEntryPreview_AttachmentKindCount {
+  string kind = 1;
+  uint32 count = 2;
+}
+message GrokBotAgentEntryPreview_Link {
+  string url = 1;
+}
+message GrokBotAgentEntryPreview_WidgetPrompt {
+  string prompt = 1;
+}
+message GrokBotAgentEntryPreview_WidgetAnswered {
+  string prompt = 1;
+  string answer = 2;
+}
+message GrokBotAgentEntryPreview_WidgetOptions {
+  string prompt = 1;
+  repeated string options = 2;
+}
+message GrokBotTranscriptWatchComputerActions {
+  repeated GrokBotComputerAction actions = 1;
+}
+message GrokBotComputerAction {
+  string agent_id = 1;
+  string type = 2;
+  double x = 3;
+  double y = 4;
+  string button = 5;
+  uint32 count = 6;
+  int64 at_ms = 7;
+}
+message GrokBotTranscriptWatchAgentStateChanged {
+  string agent_id = 1;
+  repeated string families = 2;
+  int64 changed_at_ms = 3;
+}
+message GrokBotTranscriptWatchTurnFailed {
+  string agent_id = 1;
+  string session_id = 2;
+  string turn_id = 3;
+  GrokBotTurnFailureCode code = 4;
+  string summary = 5;
+  int64 failed_at_ms = 6;
+  optional ErrorDetails error_details = 7;
+  GrokBotTurnFailureAccount account = 8;
+}
+message ErrorDetails {
+  int32 /* unresolved enum Cm */ error = 1;
+  CustomErrorDetails details = 2;
+  optional bool is_expected = 3;
+}
+message CustomErrorDetails {
+  string title = 1;
+  string detail = 2;
+  optional bool allow_command_links_potentially_unsafe_please_only_use_for_handwritten_trusted_markdown = 3;
+  optional bool is_retryable = 4;
+  optional bool show_request_id = 5;
+  optional bool should_show_immediate_error = 6;
+  repeated ErrorButton buttons = 8;
+  map<string, string> additional_info = 7;
+  repeated PlanChoice plan_choices = 9;
+  optional ErrorAnalyticsMetadata analytics_metadata = 10;
+}
+message ErrorButton {
+  string label = 1;
+  oneof action {
+    UpgradeAction upgrade = 2;
+    SwitchModelAction switch_model = 3;
+    ConfigureSpendLimitAction configure_spend_limit = 4;
+    UrlAction url = 5;
+    UpgradeChoice upgrade_choice = 6;
+    DashboardAction dashboard_action = 7;
+    ReloadWindowAction reload_window = 8;
+    ClientAction client_action = 9;
+  }
+}
+message UpgradeAction {
+  string membership_to_upgrade_to = 1;
+  optional bool try_immediate_upgrade = 2;
+  optional bool allow_trial = 3;
+  optional DashboardAction dashboard_action = 4;
+}
+message DashboardAction {
+  string action = 1;
+  map<string, string> args = 2;
+  optional string success_message = 3;
+}
+message SwitchModelAction {
+  optional string suggested_model = 1;
+  repeated SwitchModelAction_ModelParameterValue parameters = 2;
+  optional bool max_mode = 3;
+}
+message SwitchModelAction_ModelParameterValue {
+  string id = 1;
+  string value = 2;
+}
+message ConfigureSpendLimitAction {
+  string confirm_label = 1;
+}
+message UrlAction {
+  string url = 1;
+}
+message UpgradeChoice {
+}
+message ReloadWindowAction {
+}
+message ClientAction {
+  string command_id = 1;
+  map<string, string> args = 2;
+}
+message PlanChoice {
+  string label = 1;
+  optional string sublabel = 2;
+  optional string description = 3;
+  string value = 4;
+}
+message ErrorAnalyticsMetadata {
+  optional string action_required = 1;
+}
+message GrokBotTranscriptWatchRosterChanged {
+  GrokBotRosterChangeKind kind = 1;
+  string agent_id = 2;
+  int64 changed_at_ms = 3;
+  optional GrokBotAgent agent = 4;
+  repeated GrokBotUserSettingsField changed_fields = 5;
+}
+message GrokBotTranscriptWatchBoxState {
+  GrokBotBoxState state = 1;
+  bool snapshot = 2;
+}
+message GrokBotBoxState {
+  SandBoxRunState run_state = 1;
+  bool recreate_in_flight = 2;
+  optional bool image_update_available = 3;
+  optional string host_version = 4;
+  optional bool host_update_available = 5;
+  GrokBotBoxDiskPressureLevel disk_pressure = 6;
+  int64 updated_at_ms = 7;
+  optional string image_tag = 8;
+  optional string static_snapshot_path = 9;
+  optional string image_git_sha = 10;
+  optional bool static_snapshot_matches_pin = 11;
+  optional string static_snapshot_pin = 12;
+}
+message GrokBotTranscriptWatchPageTitleChanged {
+  string store_id = 1;
+  string title = 4;
+  int64 changed_at_ms = 5;
+  bool content_changed = 6;
+  oneof page {
+    string canvas_id = 2;
+    string document_id = 3;
+  }
+}
+message InterruptGrokBotAgentRunRequest {
+  string agent_id = 1;
+  string reason = 2;
+  optional string session_id = 3;
+}
+message InterruptGrokBotAgentRunResponse {
+  bool had_active_run = 1;
+}
+message MintSandVoiceCallSecretRequest {
+  string model = 1;
+  string call_id = 2;
+  string agent_id = 3;
+  SandVoiceCallStartSurface start_surface = 4;
+  optional uint32 attempt = 5;
+}
+message MintSandVoiceCallSecretResponse {
+  string client_secret = 1;
+  int64 expires_at_unix_seconds = 2;
+  string model = 3;
+  string websocket_url = 4;
+}
+message VoiceCallHarnessSessionRequest {
+  string agent_id = 1;
+  string agent_name = 2;
+  optional string user_name = 3;
+  optional string description = 4;
+  optional string spoken_language = 5;
+  optional bool has_speed_setting = 6;
+}
+message VoiceCallHarnessSessionResponse {
+  string instructions = 1;
+  repeated VoiceCallToolDescriptor tools = 2;
+  bool has_overheard = 3;
+  VoiceCallGreeting greeting = 4;
+  VoiceCallReceipt receipt = 5;
+}
+message VoiceCallToolDescriptor {
+  string type = 1;
+  string name = 2;
+  string description = 3;
+  google.protobuf.Struct parameters = 4;
+}
+message VoiceCallGreeting {
+  string direction = 1;
+  string with_landed_work = 2;
+}
+message VoiceCallReceipt {
+  VoiceCallReceiptOutput output = 1;
+  string instructions = 2;
+}
+message VoiceCallReceiptOutput {
+  string receipt = 1;
+}
+message VoiceCallHarnessToolRequest {
+  string agent_id = 1;
+  string call_id = 2;
+  string name = 3;
+  google.protobuf.Value input = 4;
+  VoiceCallLineState line = 5;
+}
+message VoiceCallLineState {
+  bool they_just_talked = 1;
+  bool news_owed = 2;
+  bool receipt_owed = 3;
+  bool already_spoke_this_turn = 4;
+}
+message VoiceCallHarnessToolResponse {
+  VoiceCallHarnessToolOutcomeKind kind = 1;
+  google.protobuf.Value output = 2;
+}
+message RecordGrokBotVoiceCallRequest {
+  string agent_id = 1;
+  google.protobuf.Struct record = 2;
+}
+message RecordGrokBotVoiceCallResponse {
+}
+message TextToSpeechRequest {
+  string text = 1;
+  optional string voice_id = 2;
+  optional string language = 3;
+  optional float speed = 4;
+  optional bool with_timestamps = 5;
+}
+message TextToSpeechResponse {
+  bytes audio = 1;
+  string mime_type = 2;
+  int64 synthesis_time_ms = 3;
+  repeated int32 char_start_ms = 4;
+  repeated int32 char_end_ms = 5;
+}
+message TranscribeAudioRequest {
+  bytes audio = 1;
+  string mime_type = 2;
+  optional string language = 3;
+}
+message TranscribeAudioResponse {
+  string text = 1;
+  int64 transcription_time_ms = 2;
+}
+message ListGrokBotAgentStatusesRequest {
+  repeated string agent_ids = 1;
+}
+message ListGrokBotAgentStatusesResponse {
+  repeated GrokBotAgentStatus statuses = 1;
+}
+message GrokBotAgentStatus {
+  string agent_id = 1;
+  optional GrokBotAgentLiveState live = 2;
+  optional GrokBotAgentClientState client = 3;
+  bool is_running = 4;
+}
+message GetGrokBotUserRuntimeSettingsRequest {
+}
+message GetGrokBotUserRuntimeSettingsResponse {
+  GrokBotUserRuntimeSettings settings = 1;
+}
+message GrokBotUserRuntimeSettings {
+  int64 updated_at_ms = 5;
+  optional GrokBotPinnedAgents pinned_agents = 6;
+  optional GrokBotSidebarSections sidebar_sections = 7;
+  optional bool has_seen_onboarding = 8;
+  optional string main_agent_id = 9;
+  optional int64 terms_seen_at_ms = 10;
+  optional GrokBotUserAutoReviewInstructions auto_review_instructions = 11;
+  GrokBotEmailProvider email_provider = 12;
+  GrokBotXToolAccess x_tool_access = 13;
+  optional GrokBotToolPermissions tool_permissions = 14;
+  optional string job_role = 15;
+}
+message GrokBotPinnedAgents {
+  repeated string agent_ids = 1;
+}
+message GrokBotSidebarSections {
+  repeated GrokBotSidebarSection sections = 1;
+}
+message GrokBotSidebarSection {
+  string id = 1;
+  string name = 2;
+  repeated string agent_ids = 3;
+}
+message GrokBotUserAutoReviewInstructions {
+  bool is_enabled = 1;
+  repeated string allow_instructions = 2;
+  repeated string block_instructions = 3;
+}
+message GrokBotToolPermissions {
+  map<string, GrokBotToolPermissionPolicy> scopes = 1;
+}
+message GrokBotToolPermissionPolicy {
+  map<string, GrokBotToolPermission> tools = 1;
+  GrokBotToolPermission reads = 2;
+  GrokBotToolPermission writes = 3;
+}
+message SetGrokBotAgentClientStateRequest {
+  string agent_id = 1;
+  optional bool mark_read = 2;
+  optional bool mark_unread = 3;
+  optional bool notifications_enabled = 4;
+  optional bool notify_on_updates_enabled = 5;
+  optional bool hidden_from_sidebar = 6;
+  optional bool mark_followed_threads_read = 7;
+}
+message SetGrokBotAgentClientStateResponse {
+  GrokBotAgentClientState state = 1;
+}
+message RespondGrokBotWidgetRequest {
+  string agent_id = 1;
+  string entry_id = 2;
+  string value = 3;
+  string session_id = 4;
+}
+message RespondGrokBotWidgetResponse {
+  bool accepted = 1;
+  optional GrokBotHarnessRefusal refusal = 2;
+}
+message DismissGrokBotWidgetRequest {
+  string agent_id = 1;
+  string entry_id = 2;
+  string session_id = 3;
+}
+message DismissGrokBotWidgetResponse {
+  bool accepted = 1;
+  optional GrokBotHarnessRefusal refusal = 2;
+}
+message ResolveGrokBotAutoReviewApprovalRequest {
+  string agent_id = 1;
+  string request_id = 2;
+  GrokBotAutoReviewApprovalResolution resolution = 3;
+  string approval_platform = 4;
+  optional string approved_command = 5;
+  optional string session_id = 6;
+  optional string mcp_elicitation_content = 8;
+}
+message ResolveGrokBotAutoReviewApprovalResponse {
+  bool dispatched = 1;
+  optional string workflow_id = 2;
+}
+message SendGrokBotDraftRequest {
+  string agent_id = 1;
+  string entry_id = 2;
+  string session_id = 3;
+  optional string shown_signature_html = 6;
+  oneof draft {
+    GrokBotEmailDraft email = 4;
+    GrokBotSlackDraft slack = 5;
+    GrokBotMeetingChatDraft meeting_chat = 7;
+    GrokBotIMessageDraft imessage = 8;
+  }
+}
+message GrokBotEmailDraft {
+  string from = 1;
+  repeated string to = 2;
+  repeated string cc = 3;
+  string subject = 4;
+  string body = 5;
+  optional GrokBotMacMailSend mac_mail = 6;
+}
+message GrokBotMacMailSend {
+  string machine_id = 1;
+  string approval_id = 2;
+}
+message GrokBotSlackDraft {
+  optional string workspace = 1;
+  string target = 2;
+  optional string thread = 3;
+  string body = 4;
+}
+message GrokBotMeetingChatDraft {
+  string meeting_id = 1;
+  optional string meeting_title = 2;
+  string body = 3;
+  bool mark_internal = 4;
+}
+message GrokBotIMessageDraft {
+  optional string to = 1;
+  optional string chat_id = 2;
+  optional string recipient_name = 3;
+  string body = 4;
+  string machine_id = 5;
+  string approval_id = 6;
+  bool server_approved = 7;
+}
+message SendGrokBotDraftResponse {
+  bool accepted = 1;
+  optional GrokBotHarnessRefusal refusal = 2;
+}
+message DiscardGrokBotDraftRequest {
+  string agent_id = 1;
+  string entry_id = 2;
+  string session_id = 3;
+}
+message DiscardGrokBotDraftResponse {
+  bool accepted = 1;
+  optional GrokBotHarnessRefusal refusal = 2;
+}
+message SubmitGrokBotUserFormRequest {
+  string agent_id = 1;
+  string entry_id = 2;
+  map<string, string> values = 3;
+  string session_id = 4;
+  GrokBotUserFormClientPlatform platform = 5;
+  bool save_to_vault = 6;
+  GrokBotUserFormVaultTarget vault_target = 7;
+}
+message SubmitGrokBotUserFormResponse {
+  bool accepted = 1;
+  optional GrokBotHarnessRefusal refusal = 2;
+}
+message DismissGrokBotUserFormRequest {
+  string agent_id = 1;
+  string entry_id = 2;
+  GrokBotUserFormDismissMode mode = 3;
+  string session_id = 4;
+  GrokBotUserFormClientPlatform platform = 5;
+}
+message DismissGrokBotUserFormResponse {
+  bool accepted = 1;
+  optional GrokBotHarnessRefusal refusal = 2;
+}
+message ReactToGrokBotMessageRequest {
+  string agent_id = 1;
+  string entry_id = 2;
+  string emoji = 3;
+  string session_id = 4;
+}
+message ReactToGrokBotMessageResponse {
+  optional GrokBotHarnessRefusal refusal = 1;
+}
+message UpdateGrokBotUserRuntimeSettingsRequest {
+  optional GrokBotPinnedAgents pinned_agents = 5;
+  optional GrokBotSidebarSections sidebar_sections = 6;
+  optional bool has_seen_onboarding = 7;
+  optional GrokBotUserAutoReviewInstructions auto_review_instructions = 8;
+  optional GrokBotXToolAccess x_tool_access = 9;
+  optional GrokBotAutoReviewRuleSave auto_review_rule_save = 10;
+  optional bool bots_hidden = 11;
+  optional GrokBotSidebarSections sidebar_sections_base = 12;
+}
+message GrokBotAutoReviewRuleSave {
+  GrokBotAutoReviewRuleSaveSurface surface = 1;
+  GrokBotAutoReviewRuleTextSource text_source = 2;
+  string connector = 3;
+}
+message UpdateGrokBotUserRuntimeSettingsResponse {
+  GrokBotUserRuntimeSettings settings = 1;
+}
+message ResolveGrokBotAttachmentReadsRequest {
+  string agent_id = 1;
+  optional string session_id = 2;
+  repeated string paths = 3;
+}
+message ResolveGrokBotAttachmentReadsResponse {
+  repeated GrokBotAttachmentRead reads = 1;
+}
+message GrokBotAttachmentRead {
+  string path = 1;
+  GrokBotAttachmentReadOutcome outcome = 2;
+  string url = 3;
+  int64 expires_at_ms = 4;
+  string content_type = 5;
+  int64 size_bytes = 6;
+  string etag = 7;
+}
+
+service GrokBotService {
+  rpc ListGrokBotAgents(ListGrokBotAgentsRequest) returns (ListGrokBotAgentsResponse);
+  rpc SendGrokBotUserMessage(SendGrokBotUserMessageRequest) returns (SendGrokBotUserMessageResponse);
+  rpc GetGrokBotSendStatus(GetGrokBotSendStatusRequest) returns (GetGrokBotSendStatusResponse);
+  rpc ListGrokBotTranscriptEntries(ListGrokBotTranscriptEntriesRequest) returns (ListGrokBotTranscriptEntriesResponse);
+  rpc WatchGrokBotTranscripts(WatchGrokBotTranscriptsRequest) returns (stream GrokBotTranscriptWatchFrame);
+  rpc InterruptGrokBotAgentRun(InterruptGrokBotAgentRunRequest) returns (InterruptGrokBotAgentRunResponse);
+  rpc MintSandVoiceCallSecret(MintSandVoiceCallSecretRequest) returns (MintSandVoiceCallSecretResponse);
+  rpc VoiceCallHarnessSession(VoiceCallHarnessSessionRequest) returns (VoiceCallHarnessSessionResponse);
+  rpc VoiceCallHarnessTool(VoiceCallHarnessToolRequest) returns (VoiceCallHarnessToolResponse);
+  rpc RecordGrokBotVoiceCall(RecordGrokBotVoiceCallRequest) returns (RecordGrokBotVoiceCallResponse);
+  rpc ListGrokBotAgentStatuses(ListGrokBotAgentStatusesRequest) returns (ListGrokBotAgentStatusesResponse);
+  rpc GetGrokBotUserRuntimeSettings(GetGrokBotUserRuntimeSettingsRequest) returns (GetGrokBotUserRuntimeSettingsResponse);
+  rpc SetGrokBotAgentClientState(SetGrokBotAgentClientStateRequest) returns (SetGrokBotAgentClientStateResponse);
+  rpc RespondGrokBotWidget(RespondGrokBotWidgetRequest) returns (RespondGrokBotWidgetResponse);
+  rpc DismissGrokBotWidget(DismissGrokBotWidgetRequest) returns (DismissGrokBotWidgetResponse);
+  rpc ResolveGrokBotAutoReviewApproval(ResolveGrokBotAutoReviewApprovalRequest) returns (ResolveGrokBotAutoReviewApprovalResponse);
+  rpc SendGrokBotDraft(SendGrokBotDraftRequest) returns (SendGrokBotDraftResponse);
+  rpc DiscardGrokBotDraft(DiscardGrokBotDraftRequest) returns (DiscardGrokBotDraftResponse);
+  rpc SubmitGrokBotUserForm(SubmitGrokBotUserFormRequest) returns (SubmitGrokBotUserFormResponse);
+  rpc DismissGrokBotUserForm(DismissGrokBotUserFormRequest) returns (DismissGrokBotUserFormResponse);
+  rpc ReactToGrokBotMessage(ReactToGrokBotMessageRequest) returns (ReactToGrokBotMessageResponse);
+  rpc UpdateGrokBotUserRuntimeSettings(UpdateGrokBotUserRuntimeSettingsRequest) returns (UpdateGrokBotUserRuntimeSettingsResponse);
+  rpc ResolveGrokBotAttachmentReads(ResolveGrokBotAttachmentReadsRequest) returns (ResolveGrokBotAttachmentReadsResponse);
+}
+
+service AiService {
+  rpc TextToSpeech(TextToSpeechRequest) returns (TextToSpeechResponse);
+  rpc TranscribeAudio(TranscribeAudioRequest) returns (TranscribeAudioResponse);
+}
