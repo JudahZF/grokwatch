@@ -67,14 +67,20 @@ final class VoiceCall {
             async let secret = session.api.mintVoiceSecret()
             async let plan = session.api.voicePlan(for: bot)
             let (credential, callPlan) = try await (secret, plan)
+            guard phase == .connecting else { return } // hung up while the call was set up
             self.plan = callPlan
             line.onEnded = { [weak self] in self?.hangUp() }
-            if (try? await line.start(calling: bot.displayParts.name)) != true {
+            let hasCallAudio = (try? await line.start(calling: bot.displayParts.name)) == true
+            guard phase == .connecting else {
+                // Hung up while CallKit started the call: `end` may have run before the call existed.
+                await line.end()
+                return
+            }
+            if !hasCallAudio {
                 // CallKit did not start or activate audio (e.g. the simulator): run the audio session ourselves.
                 try AVAudioSession.sharedInstance().setCategory(audio.isSilent ? .playback : .playAndRecord, mode: callAudioMode)
                 try AVAudioSession.sharedInstance().setActive(true)
             }
-            guard phase == .connecting else { return }
             try open(credential)
             startFollowingTheBot()
             watchAudioInterruptions()
@@ -280,6 +286,8 @@ final class VoiceCall {
             var seen: Set<String> = []
             var head: Aiserver_V1_ListGrokBotTranscriptEntriesResponse?
             var cursor: UInt64 = 0
+            // The newest entry before the call. A change to an older entry (e.g. a reaction) is not news.
+            var headSeq: UInt64 = 0
             var failures = 0
             while !Task.isCancelled {
                 do {
@@ -287,6 +295,7 @@ final class VoiceCall {
                         let page = try await api.transcript(of: bot, limit: 1)
                         head = page
                         cursor = page.entries.map(\.updatedSeq).max() ?? 0
+                        headSeq = page.entries.map(\.seq).max() ?? 0
                     }
                     stream: for try await frame in api.watch(bot, generation: head?.generation ?? 0, after: cursor) {
                         failures = 0
@@ -294,7 +303,7 @@ final class VoiceCall {
                         case .rows(let rows):
                             for entry in rows.entries {
                                 cursor = max(cursor, entry.updatedSeq)
-                                guard !rows.replay, entry.entryKind == "send-message", seen.insert(entry.entryID).inserted,
+                                guard !rows.replay, entry.seq > headSeq, entry.entryKind == "send-message", seen.insert(entry.entryID).inserted,
                                       let message = ChatMessage(entry: entry), case .text(let text) = message.content else { continue }
                                 landed(text)
                             }
