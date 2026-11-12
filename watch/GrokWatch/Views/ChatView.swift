@@ -1,4 +1,6 @@
+import ImageIO
 import SwiftUI
+import WatchKit
 
 struct ChatView: View {
     @Environment(AppSession.self) private var session
@@ -248,26 +250,19 @@ private struct TypingRow: View {
     }
 }
 
+/// A photo, decoded as a thumbnail: a full-size photo can be tens of MB of bitmap, enough to get a watch app killed.
 private struct AttachmentImage: View {
     let path: String
     let caption: String?
     let model: ChatModel
-    @State private var url: URL?
+    @State private var image: CGImage?
     @State private var isMissing = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Group {
-                if let url {
-                    AsyncImage(url: url) { phase in
-                        if let image = phase.image {
-                            image.resizable().scaledToFit()
-                        } else if phase.error != nil {
-                            placeholder
-                        } else {
-                            ProgressView()
-                        }
-                    }
+                if let image {
+                    Image(image, scale: 1, label: Text("Photo")).resizable().scaledToFit()
                 } else if isMissing {
                     placeholder
                 } else {
@@ -279,13 +274,29 @@ private struct AttachmentImage: View {
             if let caption { Text(caption).font(.caption2).foregroundStyle(.secondary).lineLimit(2) }
         }
         .task {
-            url = await model.imageURL(for: path)
-            isMissing = url == nil
+            // 2 pixels per point of screen width is sharp on every watch.
+            let maxPixelSize = min(800, Int(2 * WKInterfaceDevice.current().screenBounds.width))
+            if let url = await model.imageURL(for: path), let data = try? await URLSession.shared.data(from: url).0 {
+                image = await Self.thumbnail(of: data, maxPixelSize: maxPixelSize)
+            }
+            isMissing = image == nil
         }
     }
 
     private var placeholder: some View {
         Label("Photo", systemImage: "photo").font(.footnote).foregroundStyle(.secondary)
+    }
+
+    /// Off the main actor: decoding a large photo takes a while.
+    @concurrent private static func thumbnail(of data: Data, maxPixelSize: Int) async -> CGImage? {
+        let options = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: NSNumber(value: maxPixelSize),
+        ] as [CFString: NSNumber] as CFDictionary
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options)
     }
 }
 
