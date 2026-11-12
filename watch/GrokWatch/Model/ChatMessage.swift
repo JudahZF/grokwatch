@@ -211,8 +211,9 @@ extension ChatMessage {
             ))
         case "email-draft", "slack-draft":
             guard let draft = message.draft?.value else { return nil }
-            return .draft(Self.draft(draft, isEmail: message.type == "email-draft",
-                                     state: body.draftSendState?.value ?? body.draftSaveState?.value ?? "editable"))
+            // A state that is present but unreadable is not "editable": the draft may be sent already, so offer no Send.
+            let state = (body.draftSendState ?? body.draftSaveState).map { $0.value ?? "unknown" } ?? "editable"
+            return .draft(Self.draft(draft, isEmail: message.type == "email-draft", state: state))
         case "user-form":
             guard let form = message.formRequest?.value else { return nil }
             return .form(UserForm(

@@ -45,7 +45,7 @@ struct BotListView: View {
                     Section {
                         ForEach(section.entries) { entry in
                             NavigationLink(value: Route.chat(entry.bot)) { BotRow(entry: entry) }
-                                .botSwipeActions(entry, roster: roster, reload: load)
+                                .botSwipeActions(entry, reload: load)
                                 .flatRow()
                         }
                     } header: {
@@ -125,7 +125,7 @@ struct HiddenBotsView: View {
     var body: some View {
         List(roster?.hidden ?? []) { entry in
             NavigationLink(value: Route.chat(entry.bot)) { BotRow(entry: entry) }
-                .botSwipeActions(entry, roster: roster, reload: reload)
+                .botSwipeActions(entry, reload: reload)
                 .flatRow()
         }
         .navigationTitle("Hidden")
@@ -189,7 +189,6 @@ private enum BotAction: CaseIterable {
 private struct BotSwipeActions: ViewModifier {
     @Environment(AppSession.self) private var session
     let entry: Roster.Entry
-    let roster: Roster?
     let reload: () async -> Void
 
     func body(content: Content) -> some View {
@@ -209,8 +208,8 @@ private struct BotSwipeActions: ViewModifier {
 }
 
 extension View {
-    fileprivate func botSwipeActions(_ entry: Roster.Entry, roster: Roster?, reload: @escaping () async -> Void) -> some View {
-        modifier(BotSwipeActions(entry: entry, roster: roster, reload: reload))
+    fileprivate func botSwipeActions(_ entry: Roster.Entry, reload: @escaping () async -> Void) -> some View {
+        modifier(BotSwipeActions(entry: entry, reload: reload))
     }
 
     /// A list row with no platter, as in the official apps.

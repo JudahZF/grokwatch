@@ -193,6 +193,19 @@ struct ChatMessageDecodingTests {
         #expect(message.content == .text("Hello"))
     }
 
+    /// A draft whose state cannot be read may be sent already, so it must not offer Send again.
+    @Test func draftWithUnreadableStateIsNotEditable() throws {
+        let message = try decode("send-message", #"""
+            {"draftSendState":{"status":"sent"},"message":{"type":"email-draft","draft":{"to":["ada@example.com"],"body":"Noon?"}}}
+            """#)
+        guard case .draft(let draft) = message.content else {
+            Issue.record("Expected a draft, got \(message.content)")
+            return
+        }
+        #expect(!draft.isEditable)
+        #expect(!message.needsAnswer)
+    }
+
     @Test func approvalWithoutRequestIDIsHidden() {
         let json = #"{"message":{"type":"auto-review-approval","approval":{"summary":"Run ls","status":"pending"}}}"#
         #expect(ChatMessage(entry: entry("send-message", json)) == nil)
