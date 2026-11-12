@@ -183,8 +183,11 @@ final class ChatModel {
     // MARK: Attachments
 
     /// A signed download URL for an attachment, or nil when it is missing or too large for the watch.
+    /// Signed URLs expire, so a cached one is reused only while it has more than a minute left (0: no expiry set).
     func imageURL(for path: String) async -> URL? {
-        if imageReads[path] == nil, let reads = try? await session.api.attachmentURLs([path], of: bot) {
+        let freshUntilMs = Int64(Date.now.addingTimeInterval(60).timeIntervalSince1970 * 1000)
+        let isFresh = imageReads[path].map { $0.expiresAtMs == 0 || $0.expiresAtMs > freshUntilMs } ?? false
+        if !isFresh, let reads = try? await session.api.attachmentURLs([path], of: bot) {
             imageReads.merge(reads) { _, new in new }
         }
         guard let read = imageReads[path], read.sizeBytes <= 4_000_000 else { return nil }
