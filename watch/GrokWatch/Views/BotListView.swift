@@ -68,7 +68,7 @@ struct BotListView: View {
             }
             .confirmationDialog(actionsFor?.bot.displayParts.name ?? "", isPresented: isShowingActions, presenting: actionsFor) { entry in
                 ForEach(BotAction.allCases, id: \.self) { action in
-                    Button(action.title(for: entry)) { action.run(on: entry, roster: roster, session: session, reload: load) }
+                    Button(action.title(for: entry)) { action.run(on: entry, session: session, reload: load) }
                 }
             }
             .overlay { if roster == nil && problem == nil { ProgressView() } }
@@ -164,12 +164,15 @@ private enum BotAction: CaseIterable {
     }
 
     @MainActor
-    func run(on entry: Roster.Entry, roster: Roster?, session: AppSession, reload: @escaping () async -> Void) {
-        let pinned = roster?.pinnedIDs ?? []
+    func run(on entry: Roster.Entry, session: AppSession, reload: @escaping () async -> Void) {
         Task {
             do {
                 switch self {
-                case .pin: try await session.api.setPinned(entry.isPinned ? pinned.filter { $0 != entry.id } : pinned + [entry.id])
+                case .pin:
+                    // `setPinned` replaces the whole list, so start from the account's current one, not the last refresh:
+                    // a pin made on another device since then stays.
+                    let pinned = try await session.api.runtimeSettings().pinnedAgents.agentIds.filter { $0 != entry.id }
+                    try await session.api.setPinned(entry.isPinned ? pinned : pinned + [entry.id])
                 case .read: try await session.api.setClientState(of: entry.bot, entry.unread > 0 ? \.markRead : \.markUnread, to: true)
                 case .mute: try await session.api.setClientState(of: entry.bot, \.notificationsEnabled, to: entry.isMuted)
                 case .hide: try await session.api.setClientState(of: entry.bot, \.hiddenFromSidebar, to: !entry.isHidden)
@@ -197,7 +200,7 @@ private struct BotSwipeActions: ViewModifier {
 
     private func buttons(for actions: [BotAction]) -> some View {
         ForEach(actions, id: \.self) { action in
-            Button { action.run(on: entry, roster: roster, session: session, reload: reload) } label: {
+            Button { action.run(on: entry, session: session, reload: reload) } label: {
                 Label(action.title(for: entry), systemImage: action.icon(for: entry))
             }
             .tint(action.tint)
