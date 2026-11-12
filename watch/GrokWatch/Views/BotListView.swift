@@ -227,8 +227,10 @@ private struct WaitingCard: View {
 
     /// Up to this many question answers fit on the card; a longer question opens the chat.
     private static let maxOptions = 3
-    /// An approval with a longer command opens the chat, so you never approve a command you cannot read in full.
+    /// A longer approval command opens the chat; see `quickApproval`.
     private static let maxCommandLength = 80
+    /// A longer approval summary opens the chat; see `quickApproval`.
+    private static let maxSummaryLength = 100
 
     private var bot: Bot { waiting.entry.bot }
 
@@ -246,7 +248,8 @@ private struct WaitingCard: View {
                         Text(date.listStamp).font(.caption2).foregroundStyle(.secondary)
                     }
                 }
-                Text(summary).font(.caption2).foregroundStyle(.secondary).lineLimit(3)
+                // Never cut when Allow and Deny show: you answer only what you read in full.
+                Text(summary).font(.caption2).foregroundStyle(.secondary).lineLimit(quickApproval == nil ? 3 : nil)
                 if case .approval(let approval) = waiting.card.content, let command = approval.command, isReadable(command) {
                     Text(command).font(.caption2.monospaced())
                 }
@@ -276,21 +279,31 @@ private struct WaitingCard: View {
         }
     }
 
+    /// The approval, when the card shows all of it: a short summary, no reason, and a readable command (if any).
+    /// Only then does the card offer Allow and Deny; any other approval opens the chat, which shows it in full.
+    private var quickApproval: Approval? {
+        guard case .approval(let approval) = waiting.card.content,
+              approval.summary.count <= Self.maxSummaryLength,
+              approval.reason?.isEmpty ?? true,
+              approval.command.map(isReadable) ?? true
+        else { return nil }
+        return approval
+    }
+
     @ViewBuilder private var answers: some View {
-        switch waiting.card.content {
-        case .question(let question) where question.options.count <= Self.maxOptions:
-            ForEach(question.options, id: \.self) { option in
-                Button(option.label) { answer { try await $0.answer(waiting.card.entryID, of: bot, with: option.value) } }
-                    .buttonStyle(.pill)
-            }
-        case .approval(let approval) where approval.command.map(isReadable) ?? true:
+        if let approval = quickApproval {
             HStack(spacing: 4) {
                 Button("Deny") { answer { try await $0.resolveApproval(approval.requestID, of: bot, as: .denied) } }
                     .buttonStyle(.pill)
                 Button("Allow") { answer { try await $0.resolveApproval(approval.requestID, of: bot, as: .approved) } }
                     .buttonStyle(.primaryPill)
             }
-        default:
+        } else if case .question(let question) = waiting.card.content, question.options.count <= Self.maxOptions {
+            ForEach(question.options, id: \.self) { option in
+                Button(option.label) { answer { try await $0.answer(waiting.card.entryID, of: bot, with: option.value) } }
+                    .buttonStyle(.pill)
+            }
+        } else {
             Button("Open", action: open).buttonStyle(.primaryPill)
         }
     }

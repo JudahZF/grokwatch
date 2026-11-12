@@ -70,7 +70,8 @@ struct QuestionCard: View {
     }
 }
 
-/// The three answers of the official apps. The whole command shows, so you never approve one you cannot read.
+/// The three answers of the official apps. While it is open, the whole reason and command show,
+/// so you never approve one you cannot read.
 struct ApprovalCard: View {
     let message: ChatMessage
     let approval: Approval
@@ -81,7 +82,7 @@ struct ApprovalCard: View {
         Card(title: approval.isOpen ? "Needs approval" : "Approval", systemImage: "checkmark.shield", isActive: approval.isOpen) {
             Text(approval.summary).font(.footnote.weight(.medium))
             if let reason = approval.reason {
-                Text(reason).font(.caption2).foregroundStyle(.secondary).lineLimit(approval.isOpen ? 5 : 2)
+                Text(reason).font(.caption2).foregroundStyle(.secondary).lineLimit(approval.isOpen ? nil : 2)
             }
             if approval.isOpen, let command = approval.command {
                 Text(command).font(.caption2.monospaced())
