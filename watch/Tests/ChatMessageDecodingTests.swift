@@ -101,6 +101,33 @@ struct ChatMessageDecodingTests {
         #expect(message.needsAnswer)
     }
 
+    /// The Send confirmation shows these lines, so every address must be in them.
+    @Test func emailDraftAddressLinesNameEveryone() throws {
+        let message = try decode("send-message", #"""
+            {"message":{"type":"email-draft","draft":{"from":"me@example.com","to":["ada@example.com","bob@example.com"],
+            "cc":["cy@example.com"],"body":"Noon?"}}}
+            """#)
+        guard case .draft(let draft) = message.content else {
+            Issue.record("Expected a draft, got \(message.content)")
+            return
+        }
+        let lines = draft.addressLines.joined(separator: "\n")
+        for address in ["me@example.com", "ada@example.com", "bob@example.com", "cy@example.com"] {
+            #expect(lines.contains(address))
+        }
+    }
+
+    @Test func slackDraftAddressLinesSayThread() throws {
+        let message = try decode("send-message", #"""
+            {"message":{"type":"slack-draft","draft":{"workspace":"Acme","target":"#general","thread":"1700000000.0001","body":"Done"}}}
+            """#)
+        guard case .draft(let draft) = message.content else {
+            Issue.record("Expected a draft, got \(message.content)")
+            return
+        }
+        #expect(draft.addressLines == ["Workspace: Acme", "To: #general", "Reply in a thread"])
+    }
+
     @Test func userForm() throws {
         let message = try decode("send-message", #"""
             {"message":{"type":"user-form","formRequest":{"title":"Sign up","instruction":"Your work email",

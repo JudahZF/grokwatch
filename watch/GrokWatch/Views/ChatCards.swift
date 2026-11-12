@@ -154,13 +154,17 @@ struct DraftCard: View {
                 Outcome(text: Self.label(for: draft.state), systemImage: draft.state == "sent" ? "paperplane" : "tray")
             }
         }
+        // The card title names one recipient; the confirmation lists all of them, so you never send to someone you did not see.
         .confirmationDialog(draft.heading, isPresented: $isConfirming) {
             Button("Send") { Task { await model.sendDraft(message) } }
+        } message: {
+            Text(draft.addressLines.joined(separator: "\n"))
         }
         .sheet(isPresented: $isShowingFull) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(draft.heading).font(.footnote.weight(.semibold))
+                    ForEach(draft.addressLines, id: \.self) { Text($0).font(.caption2).foregroundStyle(.secondary) }
                     if let subject = draft.subject { Text(subject).font(.footnote) }
                     Text(draft.body).font(.footnote)
                 }

@@ -89,8 +89,10 @@ struct Approval: Equatable {
 
 struct Draft: Equatable {
     let payload: Aiserver_V1_SendGrokBotDraftRequest.OneOf_Draft
-    /// "Email to …" or "Slack to …".
+    /// "Email to …" or "Slack to …". Short, for the card title; `addressLines` has every recipient.
     let heading: String
+    /// Everyone and everywhere the draft goes, e.g. "From: …", "To: a, b", "Cc: …". Shown before you send.
+    let addressLines: [String]
     let subject: String?
     let body: String
     /// `draftSendState ?? draftSaveState ?? "editable"`, as on desktop.
@@ -248,14 +250,26 @@ extension ChatMessage {
             email.subject = draft.subject ?? ""
             email.body = body
             let to = email.to.first.map { email.to.count > 1 ? "\($0) +\(email.to.count - 1)" : $0 } ?? "…"
-            return Draft(payload: .email(email), heading: "Email to \(to)", subject: draft.subject, body: body, state: state)
+            let addressLines = [
+                email.from.isEmpty ? nil : "From: \(email.from)",
+                email.to.isEmpty ? nil : "To: \(email.to.joined(separator: ", "))",
+                email.cc.isEmpty ? nil : "Cc: \(email.cc.joined(separator: ", "))",
+            ].compactMap(\.self)
+            return Draft(payload: .email(email), heading: "Email to \(to)", addressLines: addressLines,
+                         subject: draft.subject, body: body, state: state)
         }
         var slack = Aiserver_V1_GrokBotSlackDraft()
         if let workspace = draft.workspace { slack.workspace = workspace }
         slack.target = draft.target ?? ""
         if let thread = draft.thread { slack.thread = thread }
         slack.body = body
-        return Draft(payload: .slack(slack), heading: "Slack to \(slack.target)", subject: nil, body: body, state: state)
+        let addressLines = [
+            slack.workspace.isEmpty ? nil : "Workspace: \(slack.workspace)",
+            "To: \(slack.target)",
+            slack.thread.isEmpty ? nil : "Reply in a thread",
+        ].compactMap(\.self)
+        return Draft(payload: .slack(slack), heading: "Slack to \(slack.target)", addressLines: addressLines,
+                     subject: nil, body: body, state: state)
     }
 }
 
