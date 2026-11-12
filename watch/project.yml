@@ -75,3 +75,21 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID).widgets
+  # Unit tests for the pure protocol and model logic. Hosted by the app, which shows nothing under test.
+  GrokWatchTests:
+    type: bundle.unit-test
+    platform: watchOS
+    sources: [Tests]
+    dependencies:
+      - target: GrokWatch
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID).tests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  GrokWatch:
+    build:
+      targets:
+        GrokWatch: all
+    test:
+      targets: [GrokWatchTests]

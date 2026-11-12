@@ -99,13 +99,13 @@ struct ConnectClient: Sendable {
         return Data(bytes).base64URLEncodedString() + machineID
     }
 
-    private static func envelope(_ payload: Data) -> Data {
+    static func envelope(_ payload: Data) -> Data {
         var data = Data([0])
         withUnsafeBytes(of: UInt32(payload.count).bigEndian) { data.append(contentsOf: $0) }
         return data + payload
     }
 
-    private static func takeEnvelope(from buffer: inout Data) -> (flags: UInt8, payload: Data)? {
+    static func takeEnvelope(from buffer: inout Data) -> (flags: UInt8, payload: Data)? {
         guard buffer.count >= 5 else { return nil }
         let start = buffer.startIndex
         let length = buffer[(start + 1)..<(start + 5)].reduce(0) { $0 << 8 | Int($1) }
