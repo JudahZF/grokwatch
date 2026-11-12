@@ -128,6 +128,49 @@ struct ChatMessageDecodingTests {
         #expect(message.content == .file(name: "report.pdf"))
     }
 
+    // A detail field with another JSON type than guessed must not hide the message.
+
+    @Test func floatWidthIsStillImage() throws {
+        let message = try decode("send-message", #"{"message":{"type":"attachment","url":"files/cat.png","width":390.5}}"#)
+        #expect(message.content == .image(path: "files/cat.png", caption: nil))
+    }
+
+    @Test func nonStringRespondedValueStillAnswers() throws {
+        let message = try decode("send-message", #"""
+            {"respondedValue":{"choice":"apple"},"message":{"type":"widget","widget":{"prompt":"Pick one",
+            "options":[{"label":"Apple","value":"apple"}]}}}
+            """#)
+        guard case .question(let question) = message.content else {
+            Issue.record("Expected a question, got \(message.content)")
+            return
+        }
+        #expect(question.state != .open)
+        #expect(question.answerLabel == nil) // the card then reads "Answered", not an empty label
+        #expect(!message.needsAnswer)
+    }
+
+    @Test func stringTimestampGivesNoTime() throws {
+        let message = try decode("send-message", #"{"timestampMs":"1700000000000","message":{"type":"text","content":"Hello"}}"#)
+        #expect(message.content == .text("Hello"))
+        #expect(message.sentAt == nil)
+    }
+
+    @Test func malformedReactionsGiveNone() throws {
+        let message = try decode("send-message", #"{"reactions":{"emoji":"👍"},"message":{"type":"text","content":"Hello"}}"#)
+        #expect(message.content == .text("Hello"))
+        #expect(message.reactions.isEmpty)
+    }
+
+    @Test func malformedPayloadOfAnotherTypeKeepsText() throws {
+        let message = try decode("send-message", #"{"message":{"type":"text","content":"Hello","draft":5}}"#)
+        #expect(message.content == .text("Hello"))
+    }
+
+    @Test func approvalWithoutRequestIDIsHidden() {
+        let json = #"{"message":{"type":"auto-review-approval","approval":{"summary":"Run ls","status":"pending"}}}"#
+        #expect(ChatMessage(entry: entry("send-message", json)) == nil)
+    }
+
     @Test func notice() throws {
         let message = try decode("notice", #"{"text":"Bot restarted"}"#)
         #expect(message.author == .system)

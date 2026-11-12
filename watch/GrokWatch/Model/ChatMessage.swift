@@ -70,10 +70,10 @@ struct Question: Equatable {
     let options: [Option]
     var state: State
 
-    /// The chosen option's label, or the raw answer.
+    /// The chosen option's label, or the raw answer. Nil when the answer has no text (the server sent another JSON type).
     var answerLabel: String? {
         guard case .answered(let value) = state else { return nil }
-        return options.first { $0.value == value }?.label ?? value
+        return options.first { $0.value == value }?.label ?? (value.isEmpty ? nil : value)
     }
 }
 
@@ -139,8 +139,8 @@ extension ChatMessage {
             return
         }
         guard entry.hasBody, let body = try? Self.decoder.decode(EntryBody.self, from: entry.body) else { return nil }
-        let sentAt = body.timestampMs.map { Date(timeIntervalSince1970: $0 / 1000) }
-        let reactions = body.reactions?.map(\.emoji) ?? []
+        let sentAt = body.timestampMs?.value.map { Date(timeIntervalSince1970: $0 / 1000) }
+        let reactions = body.reactions?.value?.map(\.emoji) ?? []
 
         func make(_ author: Author, _ content: Content, id: String? = nil, sender: String? = nil) -> ChatMessage {
             ChatMessage(id: id ?? entryID, entryID: entryID, seq: entry.seq, author: author, content: content, sentAt: sentAt,
@@ -149,8 +149,8 @@ extension ChatMessage {
         // As on desktop: a user entry with `fromUser`, a `channelSender`, or another person as `author` is not yours.
         // Your own entries carry none of these in a chat you own. Not tested live: this account has no shared chat.
         let otherPerson: String? =
-            if let name = body.author?.name, name != viewer { name }
-            else if body.fromUser != nil || body.channelSender != nil { body.fromUser?.name ?? "Someone" }
+            if let name = body.author?.value?.name, name != viewer { name }
+            else if body.fromUser != nil || body.channelSender != nil { body.fromUser?.value?.name ?? "Someone" }
             else { nil }
 
         switch entry.entryKind {
@@ -165,11 +165,11 @@ extension ChatMessage {
             guard let text = body.text else { return nil }
             self = make(.system, .notice(text))
         case "event":
-            guard let event = body.event, event.type == "automation-changed", let name = event.automationName else { return nil }
+            guard let event = body.event?.value, event.type == "automation-changed", let name = event.automationName else { return nil }
             self = make(.system, .notice("\(event.action?.capitalized ?? "Changed") automation “\(name)”"))
         case "send-message":
             guard let message = body.message, let content = Self.content(of: message, in: body) else { return nil }
-            self = make(.bot, content, sender: body.author?.name)
+            self = make(.bot, content, sender: body.author?.value?.name)
         default:
             return nil
         }
@@ -187,10 +187,11 @@ extension ChatMessage {
             guard let text = message.content, !text.isEmpty else { return nil }
             return .text(text)
         case "widget":
-            guard let widget = message.widget else { return nil }
+            guard let widget = message.widget?.value else { return nil }
+            // Any value means answered, even one that is not a string.
             let state: Question.State =
-                if let value = body.respondedValue { .answered(value) }
-                else if body.widgetDismissed == true || body.widgetSkipped == true { .skipped } else { .open }
+                if let responded = body.respondedValue { .answered(responded.value ?? "") }
+                else if body.widgetDismissed?.value == true || body.widgetSkipped?.value == true { .skipped } else { .open }
             return .question(Question(
                 prompt: widget.prompt ?? "",
                 help: widget.helpText,
@@ -198,7 +199,7 @@ extension ChatMessage {
                 state: state
             ))
         case "auto-review-approval":
-            guard let approval = message.approval else { return nil }
+            guard let approval = message.approval?.value else { return nil }
             return .approval(Approval(
                 requestID: approval.requestId,
                 summary: approval.summary ?? approval.cardDescription ?? "The Bot wants to take an action.",
@@ -207,11 +208,11 @@ extension ChatMessage {
                 status: approval.status ?? "pending"
             ))
         case "email-draft", "slack-draft":
-            guard let draft = message.draft else { return nil }
+            guard let draft = message.draft?.value else { return nil }
             return .draft(Self.draft(draft, isEmail: message.type == "email-draft",
-                                     state: body.draftSendState ?? body.draftSaveState ?? "editable"))
+                                     state: body.draftSendState?.value ?? body.draftSaveState?.value ?? "editable"))
         case "user-form":
-            guard let form = message.formRequest else { return nil }
+            guard let form = message.formRequest?.value else { return nil }
             return .form(UserForm(
                 title: form.title ?? "Form",
                 instruction: form.instruction,
@@ -225,13 +226,13 @@ extension ChatMessage {
             guard let url = message.url else { return nil }
             return message.width == nil ? .file(name: message.fileName ?? "File") : .image(path: url, caption: message.alt)
         case "credential-request":
-            return .phoneOnly(title: "Sign-in request", detail: message.credentialRequest?.goal, done: body.credentialResolution != nil)
+            return .phoneOnly(title: "Sign-in request", detail: message.credentialRequest?.value?.goal, done: body.credentialResolution != nil)
         case "secret-request":
-            return .phoneOnly(title: "Secret request", detail: message.secretRequest?.label, done: body.secretProvided == true)
+            return .phoneOnly(title: "Secret request", detail: message.secretRequest?.value?.label, done: body.secretProvided?.value == true)
         case "connector":
             return .phoneOnly(title: "Connect \(message.connector ?? "an app")", detail: nil, done: false)
         case "imessage-draft":
-            return .phoneOnly(title: "iMessage draft", detail: message.draft?.body, done: body.draftSendState != nil)
+            return .phoneOnly(title: "iMessage draft", detail: message.draft?.value?.body, done: body.draftSendState?.value != nil)
         default:
             return nil
         }
@@ -259,14 +260,19 @@ extension ChatMessage {
 }
 
 /// The subset of entry JSON the watch reads. Keys are camelCase or snake_case; the decoder converts snake_case.
+/// The JSON has no contract, so detail fields are `Present` or `Lenient`: one odd field must not hide the whole entry.
+/// Only what a card cannot work without stays strict.
 private struct EntryBody: Decodable {
     struct Reaction: Decodable { let emoji: String }
-    /// Only its presence matters: a `message` from another Bot.
-    struct Peer: Decodable {}
     /// The writer of an entry in a group or shared chat.
     struct Person: Decodable { let name: String? }
     /// Any JSON value. Only its presence matters, and an unknown shape must not fail the whole entry.
     struct Present: Decodable { init(from decoder: Decoder) {} }
+    /// A value of the guessed type, or nil when the JSON has another type. The field still counts as present.
+    struct Lenient<Value: Decodable>: Decodable {
+        let value: Value?
+        init(from decoder: Decoder) { value = try? decoder.singleValueContainer().decode(Value.self) }
+    }
     struct Event: Decodable {
         let type: String?
         let action: String?
@@ -317,42 +323,44 @@ private struct EntryBody: Decodable {
 
         let type: String?
         let content: String?
-        let widget: Widget?
-        let approval: ApprovalBody?
-        let draft: DraftBody?
-        let formRequest: FormBody?
-        let credentialRequest: CredentialRequest?
-        let secretRequest: SecretRequest?
+        // Each payload belongs to one `type`; a malformed one must not hide a message of another type.
+        let widget: Lenient<Widget>?
+        let approval: Lenient<ApprovalBody>?
+        let draft: Lenient<DraftBody>?
+        let formRequest: Lenient<FormBody>?
+        let credentialRequest: Lenient<CredentialRequest>?
+        let secretRequest: Lenient<SecretRequest>?
         let connector: String?
         let url: String?
         let fileName: String?
         let alt: String?
-        let width: Int?
+        /// Only its presence matters: an attachment with a width is an image.
+        let width: Present?
     }
-    struct Effect: Decodable { let kind: String? }
 
     let role: String?
     let content: String?
     let clientNonce: String?
-    let fromAgent: Peer?
-    let fromUser: Person?
-    let author: Person?
+    /// Only its presence matters: a `message` from another Bot.
+    let fromAgent: Present?
+    let fromUser: Lenient<Person>?
+    let author: Lenient<Person>?
     let channelSender: Present?
-    let timestampMs: Double?
+    let timestampMs: Lenient<Double>?
     let text: String?
     let filePath: String?
     let fileName: String?
-    let width: Int?
-    let event: Event?
+    let width: Present?
+    let event: Lenient<Event>?
     let message: Message?
-    let reactions: [Reaction]?
-    let respondedValue: String?
-    let widgetSkipped: Bool?
-    let widgetDismissed: Bool?
-    let draftSendState: String?
-    let draftSaveState: String?
-    let formResolution: String?
-    let formSubmissionEffect: Effect?
-    let credentialResolution: String?
-    let secretProvided: Bool?
+    let reactions: Lenient<[Reaction]>?
+    let respondedValue: Lenient<String>?
+    let widgetSkipped: Lenient<Bool>?
+    let widgetDismissed: Lenient<Bool>?
+    let draftSendState: Lenient<String>?
+    let draftSaveState: Lenient<String>?
+    let formResolution: Present?
+    let formSubmissionEffect: Present?
+    let credentialResolution: Present?
+    let secretProvided: Lenient<Bool>?
 }
