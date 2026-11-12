@@ -15,6 +15,7 @@
 		1D52779E592582359242874F /* RosterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A71AE7F52F160FB28F6C23B /* RosterTests.swift */; };
 		1F9B90960666B29A940413AD /* GlanceWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92828AF2A180B5668D9430BC /* GlanceWidget.swift */; };
 		221FC58389C6427A3DA404FA /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 046647C827020F03E008F36A /* SettingsView.swift */; };
+		226B45F48F055A4FD4553D69 /* RetryDelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C64F16DF0714A256FF51EDD0 /* RetryDelayTests.swift */; };
 		3CDB4D083FBBB755D90163C9 /* Auth.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3310803003D2B0FBB9CBE98 /* Auth.swift */; };
 		47ED518077339A5D33A73B93 /* ChecksumTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42A4E0D1CA297F7DF84FF396 /* ChecksumTests.swift */; };
 		50A9C933309EE48B30686FB6 /* GrokBotAPI+Voice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1793FA5ED6256F936D5FF141 /* GrokBotAPI+Voice.swift */; };
@@ -29,6 +30,7 @@
 		88DB4FBD81AA54D138BFF2C3 /* Roster.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1D033A5B7700E6A5AD04A19 /* Roster.swift */; };
 		895DE5535F9AA2D8F3367996 /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = 7E131695AE0D85708BA6E119 /* SwiftProtobuf */; };
 		9126B2B98D38A91D685BA0E0 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97B6D133EADCBE650EE52FA8 /* Theme.swift */; };
+		91E6C598D3EEA0EE2C7537E6 /* AuthRefreshTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6503CE3A11E975C02C54368 /* AuthRefreshTests.swift */; };
 		9BE90A5B6140285B86EE24D4 /* GrokBotAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A42623C3AD418B9F8DD9CFE /* GrokBotAPI.swift */; };
 		9DDDE20552CB73127E21F99E /* CallAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05D90BC25A4D01AC379131AD /* CallAudio.swift */; };
 		A281D9EEC31B148A897C1CA0 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B2F17BF5D5E9A66E1A553CD /* ChatMessage.swift */; };
@@ -104,10 +106,12 @@
 		A038C97D750780BF17EF86DB /* SmallLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallLogicTests.swift; sourceTree = "<group>"; };
 		A43D8CAEDE85AB1C4ED6E22B /* VoiceCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceCallView.swift; sourceTree = "<group>"; };
 		A5BB6EBF3FF78DF86DD1CBD2 /* Speaker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Speaker.swift; sourceTree = "<group>"; };
+		A6503CE3A11E975C02C54368 /* AuthRefreshTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRefreshTests.swift; sourceTree = "<group>"; };
 		B3310803003D2B0FBB9CBE98 /* Auth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Auth.swift; sourceTree = "<group>"; };
 		B8477FECC7CA61A05F7AD1A2 /* VoiceCall.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceCall.swift; sourceTree = "<group>"; };
 		BD50ED11AD4B5FD0504A3398 /* Glance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Glance.swift; sourceTree = "<group>"; };
 		C40B9F0B9B8F4BF5A69BE410 /* BotAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotAvatar.swift; sourceTree = "<group>"; };
+		C64F16DF0714A256FF51EDD0 /* RetryDelayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetryDelayTests.swift; sourceTree = "<group>"; };
 		C964FB208516E5C942195A79 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D1D033A5B7700E6A5AD04A19 /* Roster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Roster.swift; sourceTree = "<group>"; };
 		E797BA2C1A779DB59782EE63 /* ChatMessageDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageDecodingTests.swift; sourceTree = "<group>"; };
@@ -217,9 +221,11 @@
 		871D38099513AC0EED5080B6 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				A6503CE3A11E975C02C54368 /* AuthRefreshTests.swift */,
 				E797BA2C1A779DB59782EE63 /* ChatMessageDecodingTests.swift */,
 				42A4E0D1CA297F7DF84FF396 /* ChecksumTests.swift */,
 				430AC82B1777054AA4FA3DDE /* EnvelopeTests.swift */,
+				C64F16DF0714A256FF51EDD0 /* RetryDelayTests.swift */,
 				1A71AE7F52F160FB28F6C23B /* RosterTests.swift */,
 				A038C97D750780BF17EF86DB /* SmallLogicTests.swift */,
 			);
@@ -421,9 +427,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				91E6C598D3EEA0EE2C7537E6 /* AuthRefreshTests.swift in Sources */,
 				0CD03402DC4299EC9941AA04 /* ChatMessageDecodingTests.swift in Sources */,
 				47ED518077339A5D33A73B93 /* ChecksumTests.swift in Sources */,
 				0F9D26F3D53858A138E47C20 /* EnvelopeTests.swift in Sources */,
+				226B45F48F055A4FD4553D69 /* RetryDelayTests.swift in Sources */,
 				1D52779E592582359242874F /* RosterTests.swift in Sources */,
 				6440FBB7A8FA4074070AA0B8 /* SmallLogicTests.swift in Sources */,
 			);

@@ -37,16 +37,16 @@ actor Auth {
 
     nonisolated let machineID: String
     private let tokenStore: any TokenStore
-    private let session: URLSession
+    private let load: HTTPLoader
     private var tokens: Tokens?
     private var refreshing: Task<String, Error>?
     /// Grows on each sign-out, so a refresh that was in flight knows to drop its result.
     private var signOuts = 0
 
-    /// `store` and `session` are seams for tests; the app uses the defaults.
-    init(store: any TokenStore = Keychain(), session: URLSession = .shared) {
+    /// `store` and `load` are seams for tests; the app uses the defaults.
+    init(store: any TokenStore = Keychain(), load: @escaping HTTPLoader = { try await URLSession.shared.data(for: $0) }) {
         tokenStore = store
-        self.session = session
+        self.load = load
         tokens = tokenStore.load()
         machineID = Self.loadMachineID()
     }
@@ -88,7 +88,7 @@ actor Auth {
             try await Task.sleep(for: .seconds(2))
             let data: Data, status: Int
             do {
-                let (body, response) = try await session.data(from: components.url!)
+                let (body, response) = try await load(URLRequest(url: components.url!))
                 (data, status) = (body, (response as? HTTPURLResponse)?.statusCode ?? 0)
             } catch is URLError {
                 continue // flaky watch network; keep polling
@@ -150,7 +150,7 @@ actor Auth {
         request.setValue("application/json", forHTTPHeaderField: "content-type")
         request.httpBody = try JSONEncoder().encode(Body(client_id: Self.clientID, refresh_token: refreshToken))
         let signOutsBefore = signOuts
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await load(request)
         // A sign-out while the request was out wins: storing the new pair would sign the user back in.
         guard signOuts == signOutsBefore else { throw AuthError.signedOut }
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0

@@ -1,6 +1,10 @@
 import Foundation
 import SwiftProtobuf
 
+/// Loads one HTTP request and returns its whole body. `Auth` and `ConnectClient` take one as a seam for tests,
+/// because watchOS does not run `URLProtocol` stubs; the app uses `URLSession.shared`.
+typealias HTTPLoader = @Sendable (URLRequest) async throws -> (Data, URLResponse)
+
 /// Minimal Connect-protocol client (binary proto) for Grok Bot's internal API.
 /// Uses plain URLSession data tasks, which watchOS allows without an audio or CallKit session.
 /// Wire details: docs/grok-bot-protocol.md.
@@ -27,14 +31,14 @@ struct ConnectClient: Sendable {
     }
 
     let auth: Auth
-    var session: URLSession = .shared
+    var load: HTTPLoader = { try await URLSession.shared.data(for: $0) }
 
     func unary<Response: Message>(_ method: String, _ request: some Message) async throws -> Response {
         let body = try request.serializedData()
         return try await authorized { token in
             var urlRequest = makeRequest(method, contentType: "application/proto", token: token)
             urlRequest.httpBody = body
-            let (data, response) = try await session.data(for: urlRequest)
+            let (data, response) = try await load(urlRequest)
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
             guard status == 200 else { throw Self.error(from: data, status: status) }
             return try Response(serializedBytes: data)
@@ -54,7 +58,7 @@ struct ConnectClient: Sendable {
                         var urlRequest = makeRequest(method, contentType: "application/connect+proto", token: token)
                         urlRequest.timeoutInterval = Self.streamIdleTimeout
                         urlRequest.httpBody = body
-                        let (bytes, response) = try await session.bytes(for: urlRequest)
+                        let (bytes, response) = try await URLSession.shared.bytes(for: urlRequest)
                         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
                         guard status == 200 else {
                             var errorBody = Data()

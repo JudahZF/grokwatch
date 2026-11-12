@@ -33,13 +33,13 @@ final class ChatModel {
     func run() async {
         var failures = 0
         while !Task.isCancelled {
+            var isConnected = false
             do {
                 if needsReload { try await reload() }
                 status = nil
-                var isFirstFrame = true
                 for try await frame in session.api.watch(bot, generation: generation, after: cursor) {
-                    if isFirstFrame {
-                        isFirstFrame = false
+                    if !isConnected {
+                        isConnected = true
                         failures = 0
                         markRead()
                     }
@@ -47,8 +47,8 @@ final class ChatModel {
                 }
             } catch is CancellationError {
                 return
-            } catch let error as URLError where error.code == .timedOut {
-                // The stream went idle (no heartbeat): reconnect quietly.
+            } catch let error as URLError where error.code == .timedOut && isConnected {
+                // A live stream went idle (no heartbeat): reconnect quietly. A timeout before the first frame is an error.
             } catch {
                 if Task.isCancelled { return }
                 status = session.describe(error)
