@@ -11,29 +11,71 @@ A watch-only SwiftUI client for Grok Bot. It talks straight to the app's interna
 - **Voice:** tap a Bot reply to hear it in that Bot's voice, or turn on "Read replies aloud" in Settings. The phone button starts a live voice call (CallKit); the Bot works on what you ask and tells you when it is done.
 - **Complication:** unread count on the watch face; tap it to open the Bot with unread messages. Background refresh keeps it current.
 
-## Build and run
+## Requirements
 
-```sh
-xcodegen                     # after editing project.yml
-open GrokWatch.xcodeproj     # pick your watch as the run destination, then Run
+| Tool | Version | When |
+|---|---|---|
+| Xcode | 27.2 (needs Swift 6.2 or later) | Always |
+| Apple Watch or watch simulator | watchOS 10 or later | Always |
+| [XcodeGen](https://github.com/yonaskolb/XcodeGen) | 2.44.1 | Only when you edit `project.yml` |
+| `protoc` and `protoc-gen-swift` | `protoc-gen-swift` 1.39.0 | Only when you change `proto/grokbot.proto` |
+
+To get `protoc-gen-swift`, build the `protoc-gen-swift` product of `apple/swift-protobuf` at tag `1.39.0`.
+
+## Signing
+
+Create `watch/Local.xcconfig` (git ignores it) with your team and a bundle id prefix you own:
+
+```xcconfig
+DEVELOPMENT_TEAM = ABCDE12345
+BUNDLE_ID_PREFIX = com.yourname
 ```
 
-Proto changes: regenerate `GrokWatch/Generated/` with
-`protoc -I ../proto --swift_out=GrokWatch/Generated --swift_opt=Visibility=Internal grokbot.proto`
-(the `protoc-gen-swift` version must match the `SwiftProtobuf` package version in `project.yml`).
+The app id (`<prefix>.grokwatch`), the widget id (`<prefix>.grokwatch.widgets`) and the App Group (`group.<prefix>.grokwatch`) all derive from the prefix. `watch/Signing.xcconfig` holds the defaults; do not edit it for your own build.
+
+A simulator build needs no `Local.xcconfig`. A device build needs the App Group on both targets and a profile for each. Xcode creates them when it is signed in to your Apple ID (Settings → Accounts) and builds with `-allowProvisioningUpdates`.
+
+## Build and run
+
+Open `watch/GrokWatch.xcodeproj` in Xcode, pick your watch or a simulator as the run destination, then Run.
+
+Build from the command line (repo root):
+
+```sh
+xcodebuild -project watch/GrokWatch.xcodeproj -scheme GrokWatch -destination 'generic/platform=watchOS Simulator' -derivedDataPath /tmp/grokwatch-dd CODE_SIGNING_ALLOWED=NO build
+```
+
+After you edit `project.yml`, regenerate the project and commit the result:
+
+```sh
+cd watch && xcodegen generate
+```
+
+## Test
+
+The unit tests cover the pure protocol and model logic. They run on a watch simulator (repo root):
+
+```sh
+SIM=$(xcrun simctl list devices available | grep -i 'Apple Watch' | head -1 | grep -oE '[0-9A-F-]{36}')
+xcodebuild test -project watch/GrokWatch.xcodeproj -scheme GrokWatch -destination "platform=watchOS Simulator,id=$SIM" -derivedDataPath /tmp/grokwatch-dd
+```
+
+Under test the app shows an empty screen, so a test run makes no network request.
 
 ## Simulator testing (Debug builds only)
 
 ```sh
 SIMCTL_CHILD_GROKWATCH_SEED_TOKENS='{"accessToken":"…","refreshToken":"…"}' \
 SIMCTL_CHILD_GROKWATCH_OPEN_BOT=penelope \
-xcrun simctl launch <sim-id> com.example.grokwatch
+xcrun simctl launch <sim-id> <your bundle id>
 ```
 
 `SEED_TOKENS` skips the QR login. `OPEN_BOT` opens the first Bot (hidden ones too) whose name starts with that text. Seeded tokens rotate on the next refresh, so whatever client they came from has to log in again.
 
 Add `SIMCTL_CHILD_GROKWATCH_CALL=1` to start a voice call on open, and `SIMCTL_CHILD_GROKWATCH_SILENT_CALL=1` to run it with no audio engine. The simulator's call audio hangs CoreAudio, so test real audio on a watch.
 
-## Signing
+## Proto changes
 
-The complication needs an App Group (`group.com.example.grokwatch`) on both targets and a profile for `com.example.grokwatch.widgets`. Xcode creates them when it is signed in to your Apple ID (Settings → Accounts) and builds with `-allowProvisioningUpdates`.
+Regenerate `GrokWatch/Generated/` from `watch/`:
+`protoc -I ../proto --swift_out=GrokWatch/Generated --swift_opt=Visibility=Internal grokbot.proto`
+(the `protoc-gen-swift` version must match the `SwiftProtobuf` package version in `project.yml`).
