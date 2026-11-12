@@ -6,7 +6,7 @@ An unofficial Apple Watch client for Grok Bot. It runs on the watch alone: there
 
 | Waiting for you | Chat | Approval | Question | Draft |
 | :---: | :---: | :---: | :---: | :---: |
-| <img src="docs/images/home.png" width="150" alt="The Bot list. A card from the Bot Forge waits for an answer, with Deny and Allow buttons."> | <img src="docs/images/chat-text.png" width="150" alt="A chat with the Bot Atlas, with two replies and the message field."> | <img src="docs/images/chat-approval.png" width="150" alt="An approval card in a chat. It shows the command and an Allow once button."> | <img src="docs/images/chat-question.png" width="150" alt="A question card in a chat, with one button for each answer."> | <img src="docs/images/chat-draft.png" width="150" alt="An email draft card in a chat, with the recipients and the subject."> |
+| <img src="docs/images/home.png" width="150" alt="The Bot list. A card from the Bot Forge waits for an answer, with Deny and Allow buttons."> | <img src="docs/images/chat-text.png" width="150" alt="A chat with the Bot Ledger, with your message, its reply and the message field."> | <img src="docs/images/chat-approval.png" width="150" alt="An approval card in a chat. It shows the command and an Allow once button."> | <img src="docs/images/chat-question.png" width="150" alt="A question card in a chat, with one button for each answer."> | <img src="docs/images/chat-draft.png" width="150" alt="An email draft card in a chat, with the recipients and the subject."> |
 
 The screens show sample data from the app's [demo mode](watch/README.md#demo-mode), not a real account.
 
