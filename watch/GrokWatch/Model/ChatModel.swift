@@ -54,6 +54,19 @@ final class ChatModel {
         guard !text.isEmpty else { return }
         let id = UUID().uuidString.lowercased()
         messages.append(ChatMessage(id: id, entryID: id, seq: .max, author: .me, content: .text(text), sentAt: .now, isPending: true))
+        await deliver(text, id: id)
+    }
+
+    /// Sends a failed message again. The id is the same, and the server drops a duplicate, so this cannot send twice.
+    func retry(_ message: ChatMessage) async {
+        guard message.isFailed, case .text(let text) = message.content,
+              let index = messages.firstIndex(where: { $0.id == message.id }) else { return }
+        messages[index].isFailed = false
+        status = nil
+        await deliver(text, id: message.id)
+    }
+
+    private func deliver(_ text: String, id: String) async {
         let updatesBeforeSend = stateUpdates
         do {
             let response = try await session.api.send(text, to: bot, messageID: id)
@@ -66,8 +79,8 @@ final class ChatModel {
                 activity = "Thinking…"
             }
         } catch {
-            // `id` is idempotent on the server; keep a bubble the stream already confirmed.
-            messages.removeAll { $0.id == id && $0.isPending }
+            // Keep the text: dictation on a watch is slow to repeat. A bubble the stream already confirmed is not pending.
+            if let index = messages.firstIndex(where: { $0.id == id && $0.isPending }) { messages[index].isFailed = true }
             status = session.describe(error)
         }
     }
@@ -105,10 +118,10 @@ final class ChatModel {
         }
     }
 
-    func resolve(_ message: ChatMessage, approve: Bool) async {
+    func resolve(_ message: ChatMessage, as resolution: Aiserver_V1_GrokBotAutoReviewApprovalResolution) async {
         guard case .approval(let approval) = message.content else { return }
-        await act(on: message) { api, bot in try await api.resolveApproval(approval.requestID, of: bot, approve: approve) } then: {
-            if case .approval(var approval) = $0 { approval.status = approve ? "approved" : "denied"; $0 = .approval(approval) }
+        await act(on: message) { api, bot in try await api.resolveApproval(approval.requestID, of: bot, as: resolution) } then: {
+            if case .approval(var approval) = $0 { approval.status = resolution.status; $0 = .approval(approval) }
         }
     }
 
@@ -180,9 +193,9 @@ final class ChatModel {
             self.oldestSeq = page.entries.map(\.seq).min() ?? oldestSeq
             hasEarlier = page.entries.count >= Self.pageSize
             let known = Set(messages.map(\.id))
-            let earlier = page.entries.compactMap(ChatMessage.init(entry:)).filter { !known.contains($0.id) }
+            let earlier = page.entries.compactMap { ChatMessage(entry: $0, viewer: bot.viewerName) }.filter { !known.contains($0.id) }
             messages = earlier.sorted { $0.seq < $1.seq } + messages
-            settleQuestions()
+            messages.settleQuestions()
         } catch {
             status = session.describe(error)
         }
@@ -199,10 +212,10 @@ final class ChatModel {
         cursor = page.entries.map(\.updatedSeq).max() ?? 0
         oldestSeq = page.entries.map(\.seq).min()
         hasEarlier = page.entries.count >= Self.pageSize
-        let loaded = page.entries.compactMap(ChatMessage.init(entry:)).sorted { $0.seq < $1.seq }
+        let loaded = page.entries.compactMap { ChatMessage(entry: $0, viewer: bot.viewerName) }.sorted { $0.seq < $1.seq }
         let loadedIDs = Set(loaded.map(\.id))
         messages = loaded + messages.filter { $0.isPending && !loadedIDs.contains($0.id) }
-        settleQuestions()
+        messages.settleQuestions()
         needsReload = false
     }
 
@@ -212,7 +225,7 @@ final class ChatModel {
         case .rows(let rows):
             for entry in rows.entries {
                 cursor = max(cursor, entry.updatedSeq)
-                if let message = ChatMessage(entry: entry) { upsert(message, live: !rows.replay) }
+                if let message = ChatMessage(entry: entry, viewer: bot.viewerName) { upsert(message, live: !rows.replay) }
             }
             for deletion in rows.deletes {
                 cursor = max(cursor, deletion.updatedSeq)
@@ -267,17 +280,22 @@ final class ChatModel {
                 if session.autoSpeak, !session.isInCall, case .text = message.content { Task { await speak(message) } }
             }
         }
-        settleQuestions()
+        messages.settleQuestions()
     }
+}
 
-    /// As on desktop, a question stops taking answers once you send a message after it.
-    private func settleQuestions() {
-        guard let lastMine = messages.lastIndex(where: { $0.author == .me }) else { return }
-        for index in messages.indices where index < lastMine {
-            if case .question(var question) = messages[index].content, question.state == .open {
-                question.state = .skipped
-                messages[index].content = .question(question)
-            }
+extension Bot {
+    /// Your display name in a group or shared chat. Nil in a chat with only you and the Bot.
+    var viewerName: String? { people.first(where: \.isViewer)?.displayName }
+}
+
+extension Aiserver_V1_GrokBotAutoReviewApprovalResolution {
+    /// The approval `status` the server writes for this answer.
+    var status: String {
+        switch self {
+        case .approved: "approved"
+        case .always: "always"
+        default: "denied"
         }
     }
 }

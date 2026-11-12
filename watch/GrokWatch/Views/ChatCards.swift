@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The shared frame for cards the Bot sends: a small tinted header, then content.
+/// The shared frame for cards the Bot sends: a small header, then content. A card that waits for you has an orange dot.
 private struct Card<Content: View>: View {
     let title: String
     let systemImage: String
@@ -9,17 +9,17 @@ private struct Card<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Label(title, systemImage: systemImage)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(isActive ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+            HStack(spacing: 4) {
+                if isActive { Circle().fill(Theme.attention).frame(width: 6, height: 6) }
+                Label(title, systemImage: systemImage)
+            }
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(.secondary)
             content
         }
-        .padding(8)
+        .padding(9)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.gray.opacity(0.18), in: .rect(cornerRadius: 14))
-        .overlay {
-            if isActive { RoundedRectangle(cornerRadius: 14).strokeBorder(.tint.opacity(0.6), lineWidth: 1) }
-        }
+        .background(Theme.surface, in: .rect(cornerRadius: 16))
     }
 }
 
@@ -53,10 +53,8 @@ struct QuestionCard: View {
                     ProgressView()
                 } else {
                     ForEach(question.options, id: \.self) { option in
-                        Button { Task { await model.answer(message, with: option) } } label: {
-                            Text(option.label).font(.footnote).frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
+                        Button(option.label) { Task { await model.answer(message, with: option) } }
+                            .buttonStyle(.pill)
                     }
                     Button("Skip") { Task { await model.skip(message) } }
                         .font(.caption2)
@@ -72,39 +70,50 @@ struct QuestionCard: View {
     }
 }
 
+/// The three answers of the official apps. The whole command shows, so you never approve one you cannot read.
 struct ApprovalCard: View {
     let message: ChatMessage
     let approval: Approval
     let model: ChatModel
+    @State private var isConfirmingAlways = false
 
     var body: some View {
-        Card(title: "Approval", systemImage: "checkmark.shield", isActive: approval.isOpen) {
-            Text(approval.summary).font(.footnote)
+        Card(title: approval.isOpen ? "Needs approval" : "Approval", systemImage: "checkmark.shield", isActive: approval.isOpen) {
+            Text(approval.summary).font(.footnote.weight(.medium))
             if let reason = approval.reason {
                 Text(reason).font(.caption2).foregroundStyle(.secondary).lineLimit(approval.isOpen ? 5 : 2)
             }
             if approval.isOpen, let command = approval.command {
-                Text(command).font(.caption2.monospaced()).lineLimit(3)
-                    .padding(4)
-                    .background(.black.opacity(0.4), in: .rect(cornerRadius: 6))
+                Text(command).font(.caption2.monospaced())
+                    .padding(6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.black.opacity(0.45), in: .rect(cornerRadius: 8))
             }
             if approval.isOpen {
                 if model.busyIDs.contains(message.id) {
                     ProgressView()
                 } else {
-                    HStack {
-                        Button("Deny") { Task { await model.resolve(message, approve: false) } }
-                            .buttonStyle(.bordered)
-                        Button("Approve") { Task { await model.resolve(message, approve: true) } }
-                            .buttonStyle(.borderedProminent)
-                            .tint(.green)
-                    }
-                    .font(.footnote)
+                    Button("Allow once") { Task { await model.resolve(message, as: .approved) } }
+                        .buttonStyle(.primaryPill)
+                    Button("Always allow") { isConfirmingAlways = true }
+                        .buttonStyle(.pill)
+                    Button("Deny") { Task { await model.resolve(message, as: .denied) } }
+                        .buttonStyle(.pill)
                 }
             } else {
-                Outcome(text: approval.status.capitalized, systemImage: Self.icon(for: approval.status))
+                Outcome(text: Self.label(for: approval.status), systemImage: Self.icon(for: approval.status))
             }
         }
+        // "Always allow" saves a rule for the whole account, so it takes a second tap.
+        .confirmationDialog("Always allow this?", isPresented: $isConfirmingAlways) {
+            Button("Always allow") { Task { await model.resolve(message, as: .always) } }
+        } message: {
+            Text("The Bot will not ask again for actions like this.")
+        }
+    }
+
+    private static func label(for status: String) -> String {
+        status == "always" ? "Always allowed" : status.capitalized
     }
 
     private static func icon(for status: String) -> String {
@@ -134,13 +143,12 @@ struct DraftCard: View {
                 if model.busyIDs.contains(message.id) {
                     ProgressView()
                 } else {
-                    HStack {
+                    HStack(spacing: 4) {
                         Button("Discard") { Task { await model.discardDraft(message) } }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(.pill)
                         Button("Send") { isConfirming = true }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(.primaryPill)
                     }
-                    .font(.footnote)
                 }
             } else {
                 Outcome(text: Self.label(for: draft.state), systemImage: draft.state == "sent" ? "paperplane" : "tray")
@@ -190,7 +198,7 @@ struct FormCard: View {
                 if model.busyIDs.contains(message.id) {
                     ProgressView()
                 } else {
-                    Button("Fill in") { isFilling = true }.buttonStyle(.borderedProminent).font(.footnote)
+                    Button("Fill in") { isFilling = true }.buttonStyle(.primaryPill)
                 }
             } else {
                 Outcome(text: "Done", systemImage: "checkmark")

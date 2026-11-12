@@ -71,23 +71,16 @@ struct VoiceCallView: View {
     }
 
     private var avatar: some View {
-        AsyncImage(url: URL(string: call.bot.avatarURL)) { image in
-            image.resizable().scaledToFill()
-        } placeholder: {
-            Text(call.bot.displayParts.name.prefix(1)).font(.title2)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(.tint.opacity(0.4))
-        }
-        .frame(width: 54, height: 54)
-        .clipShape(Circle())
-        .padding(5)
-        .overlay {
-            // The ring only moves while the Bot speaks.
-            Circle().strokeBorder(.tint, lineWidth: 2)
-                .phaseAnimator([false, true], trigger: call.isBotSpeaking) { ring, grown in
-                    ring.scaleEffect(call.isBotSpeaking && grown ? 1.12 : 1)
-                        .opacity(call.phase == .live ? 1 : 0.3)
-                }
-        }
+        BotAvatar(bot: call.bot)
+            .frame(width: 54, height: 54)
+            .padding(5)
+            .overlay {
+                // The ring only moves while the Bot speaks.
+                Circle().strokeBorder(Theme.ink, lineWidth: 2)
+                    .phaseAnimator([false, true], trigger: call.isBotSpeaking) { ring, grown in
+                        ring.scaleEffect(call.isBotSpeaking && grown ? 1.12 : 1)
+                            .opacity(call.phase == .live ? 1 : 0.3)
+                    }
+            }
     }
 }

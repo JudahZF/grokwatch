@@ -62,11 +62,12 @@ extension GrokBotAPI {
         try await accept("DismissGrokBotWidget", request, as: Aiserver_V1_DismissGrokBotWidgetResponse.self)
     }
 
-    func resolveApproval(_ requestID: String, of bot: Bot, approve: Bool) async throws {
+    /// `.always` also saves an Allow rule for the account, as "Always allow" does in the official apps.
+    func resolveApproval(_ requestID: String, of bot: Bot, as resolution: Aiserver_V1_GrokBotAutoReviewApprovalResolution) async throws {
         var request = Aiserver_V1_ResolveGrokBotAutoReviewApprovalRequest()
         request.agentID = bot.agentID
         request.requestID = requestID
-        request.resolution = approve ? .approved : .denied
+        request.resolution = resolution
         request.approvalPlatform = "ios" // the desktop sends "desktop"; the mobile apps send their platform
         if !bot.viewerSessionID.isEmpty { request.sessionID = bot.viewerSessionID }
         let response: Aiserver_V1_ResolveGrokBotAutoReviewApprovalResponse =

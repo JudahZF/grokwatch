@@ -27,7 +27,11 @@ struct ChatMessage: Identifiable, Equatable {
     var content: Content
     let sentAt: Date?
     var reactions: [String] = []
+    /// Who wrote it, when that is not you or the chat's own Bot: a group member, or another person in a shared chat.
+    var sender: String?
     var isPending = false
+    /// The send did not reach the server. The bubble stays so the text is not lost; `ChatModel.retry` sends it again.
+    var isFailed = false
 
     /// What "Read aloud" speaks.
     var spokenText: String? {
@@ -111,9 +115,23 @@ struct UserForm: Equatable {
     var isOpen: Bool
 }
 
+extension [ChatMessage] {
+    /// As on desktop, a question stops taking answers once you send a message after it.
+    mutating func settleQuestions() {
+        guard let lastMine = lastIndex(where: { $0.author == .me }) else { return }
+        for index in indices where index < lastMine {
+            if case .question(var question) = self[index].content, question.state == .open {
+                question.state = .skipped
+                self[index].content = .question(question)
+            }
+        }
+    }
+}
+
 extension ChatMessage {
     /// Returns nil for entries the chat does not show (tool calls, most events, agent-to-agent traffic).
-    init?(entry: TranscriptEntry) {
+    /// `viewer` is your display name in a group or shared chat, to tell your messages from other people's.
+    init?(entry: TranscriptEntry, viewer: String? = nil) {
         let entryID = entry.entryID.isEmpty ? "seq-\(entry.seq)" : entry.entryID
         if entry.bodyOmitted, entry.entryKind == "send-message" {
             self.init(id: entryID, entryID: entryID, seq: entry.seq, author: .bot,
@@ -124,17 +142,25 @@ extension ChatMessage {
         let sentAt = body.timestampMs.map { Date(timeIntervalSince1970: $0 / 1000) }
         let reactions = body.reactions?.map(\.emoji) ?? []
 
-        func make(_ author: Author, _ content: Content, id: String? = nil) -> ChatMessage {
-            ChatMessage(id: id ?? entryID, entryID: entryID, seq: entry.seq, author: author, content: content, sentAt: sentAt, reactions: reactions)
+        func make(_ author: Author, _ content: Content, id: String? = nil, sender: String? = nil) -> ChatMessage {
+            ChatMessage(id: id ?? entryID, entryID: entryID, seq: entry.seq, author: author, content: content, sentAt: sentAt,
+                        reactions: reactions, sender: sender)
         }
+        // As on desktop: a user entry with `fromUser`, a `channelSender`, or another person as `author` is not yours.
+        // Your own entries carry none of these in a chat you own. Not tested live: this account has no shared chat.
+        let otherPerson: String? =
+            if let name = body.author?.name, name != viewer { name }
+            else if body.fromUser != nil || body.channelSender != nil { body.fromUser?.name ?? "Someone" }
+            else { nil }
 
         switch entry.entryKind {
         case "message" where body.role == "user" && body.fromAgent == nil:
             guard let text = body.content, !text.isEmpty else { return nil }
-            self = make(.me, .text(text), id: body.clientNonce)
+            self = if let otherPerson { make(.bot, .text(text), sender: otherPerson) } else { make(.me, .text(text), id: body.clientNonce) }
         case "user-attachment":
             guard let path = body.filePath else { return nil }
-            self = make(.me, body.width == nil ? .file(name: body.fileName ?? "File") : .image(path: path, caption: nil))
+            let content: Content = body.width == nil ? .file(name: body.fileName ?? "File") : .image(path: path, caption: nil)
+            self = make(otherPerson == nil ? .me : .bot, content, sender: otherPerson)
         case "notice":
             guard let text = body.text else { return nil }
             self = make(.system, .notice(text))
@@ -143,7 +169,7 @@ extension ChatMessage {
             self = make(.system, .notice("\(event.action?.capitalized ?? "Changed") automation “\(name)”"))
         case "send-message":
             guard let message = body.message, let content = Self.content(of: message, in: body) else { return nil }
-            self = make(.bot, content)
+            self = make(.bot, content, sender: body.author?.name)
         default:
             return nil
         }
@@ -237,6 +263,10 @@ private struct EntryBody: Decodable {
     struct Reaction: Decodable { let emoji: String }
     /// Only its presence matters: a `message` from another Bot.
     struct Peer: Decodable {}
+    /// The writer of an entry in a group or shared chat.
+    struct Person: Decodable { let name: String? }
+    /// Any JSON value. Only its presence matters, and an unknown shape must not fail the whole entry.
+    struct Present: Decodable { init(from decoder: Decoder) {} }
     struct Event: Decodable {
         let type: String?
         let action: String?
@@ -305,6 +335,9 @@ private struct EntryBody: Decodable {
     let content: String?
     let clientNonce: String?
     let fromAgent: Peer?
+    let fromUser: Person?
+    let author: Person?
+    let channelSender: Present?
     let timestampMs: Double?
     let text: String?
     let filePath: String?

@@ -13,6 +13,9 @@ final class AppSession {
     var autoSpeak = UserDefaults.standard.bool(forKey: "autoSpeak") {
         didSet { UserDefaults.standard.set(autoSpeak, forKey: "autoSpeak") }
     }
+    var bubbleStyle = UserDefaults.standard.string(forKey: "bubbleStyle").flatMap(BubbleStyle.init) ?? .ink {
+        didSet { UserDefaults.standard.set(bubbleStyle.rawValue, forKey: "bubbleStyle") }
+    }
     /// True during a voice call; chat auto-speak stays quiet so it does not talk over the call.
     var isInCall = false
     /// A Bot to open, from a complication tap (`DeepLink`). The Bot list consumes it.
@@ -45,6 +48,31 @@ final class AppSession {
         if roster.glance.save() { WidgetCenter.shared.reloadAllTimelines() }
         return roster
     }
+
+    /// The Bots that wait for your answer, each with its open card. Most recent first.
+    /// Reads a few recent entries of each candidate, because the Bot list does not carry the card itself.
+    func loadWaiting(in roster: Roster) async -> [WaitingBot] {
+        let candidates = roster.visible.filter { $0.mayWaitForYou || $0.unread > 0 }.prefix(Self.maxWaitingChecks)
+        let found = await withTaskGroup(of: WaitingBot?.self, returning: [WaitingBot].self) { group in
+            for entry in candidates {
+                group.addTask { [api] in
+                    guard let page = try? await api.transcript(of: entry.bot, limit: 15) else { return nil }
+                    var messages = page.entries.compactMap { ChatMessage(entry: $0, viewer: entry.bot.viewerName) }.sorted { $0.seq < $1.seq }
+                    messages.settleQuestions()
+                    return messages.last(where: \.needsAnswer).map { WaitingBot(entry: entry, card: $0) }
+                }
+            }
+            var found: [WaitingBot] = []
+            for await bot in group {
+                if let bot { found.append(bot) }
+            }
+            return found
+        }
+        return found.sorted { ($0.entry.lastActivity ?? .distantPast) > ($1.entry.lastActivity ?? .distantPast) }
+    }
+
+    /// Each check is one request, and the list refreshes every 30 seconds.
+    private static let maxWaitingChecks = 6
 
     /// Background app refresh keeps the complication current. watchOS decides the real timing (a few times an hour at most).
     func scheduleRefresh() {

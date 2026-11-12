@@ -4,6 +4,7 @@ import Foundation
 /// - Hidden: Bots with `hidden_from_sidebar` move to a separate list (shared Bots that are hidden are dropped).
 /// - Order: pinned Bots in pin order, then custom sections; inside a group, most recent activity first.
 /// - Unread: `unread_count` or `unread_thread_count` above zero.
+/// - Pinned Bots are a row of large avatars above the list, as on the phone.
 struct Roster {
     struct Entry: Identifiable, Hashable {
         let bot: Bot
@@ -12,6 +13,10 @@ struct Roster {
         let isPinned: Bool
         let isHidden: Bool
         let isMuted: Bool
+        /// The account's main Bot. The official apps mark it with a star.
+        let isMain: Bool
+        /// The server says the Bot waits for you, or its last entry is a question. `AppSession.loadWaiting` confirms it.
+        let mayWaitForYou: Bool
         /// The last message, as the server summarises it for the sidebar.
         let preview: String?
         let lastActivity: Date?
@@ -24,6 +29,8 @@ struct Roster {
         let entries: [Entry]
     }
 
+    var pinned: [Entry] = []
+    /// The Bots below the pinned row.
     var sections: [Section] = []
     var hidden: [Entry] = []
     /// Pinned Bot ids in pin order, for pin and unpin.
@@ -47,6 +54,8 @@ struct Roster {
                 isPinned: pinnedIDs.contains(bot.agentID),
                 isHidden: client?.hiddenFromSidebar ?? false,
                 isMuted: client.map { !$0.notificationsEnabled } ?? false,
+                isMain: settings.hasMainAgentID && [bot.agentID, bot.id].contains(settings.mainAgentID),
+                mayWaitForYou: (status?.live.hasAwaiting ?? false) || (client.map(Self.endsWithQuestion) ?? false),
                 preview: client.flatMap(Self.preview),
                 lastActivity: recency(bot) > 0 ? Date(timeIntervalSince1970: Double(recency(bot)) / 1000) : nil
             )
@@ -63,15 +72,13 @@ struct Roster {
         let visibleByID = Dictionary(visible.map { ($0.agentID, $0) }) { first, _ in first }
 
         self.pinnedIDs = pinnedIDs
-        let pinned = pinnedIDs.compactMap { visibleByID[$0] }
+        pinned = pinnedIDs.compactMap { visibleByID[$0] }.map(entry)
         let unpinned = visible.filter { !pinnedIDs.contains($0.agentID) }
 
         var groups: [Section] = []
-        if !pinned.isEmpty { groups.append(Section(id: "pinned", title: "Pinned", entries: pinned.map(entry))) }
-
         let custom = settings.sidebarSections.sections
         if custom.isEmpty {
-            groups.append(Section(id: Self.restSectionID, title: pinned.isEmpty ? nil : "Bots", entries: unpinned.map(entry)))
+            groups.append(Section(id: Self.restSectionID, title: nil, entries: unpinned.map(entry)))
         } else {
             var sectionOf: [String: String] = [:]
             for section in custom where section.id != Self.restSectionID {
@@ -95,6 +102,13 @@ struct Roster {
         sections = groups
     }
 
+    private static func endsWithQuestion(_ client: Aiserver_V1_GrokBotAgentClientState) -> Bool {
+        switch client.lastEntryPreview.preview {
+        case .widgetPrompt, .widgetOptions: true
+        default: false
+        }
+    }
+
     private static func preview(_ client: Aiserver_V1_GrokBotAgentClientState) -> String? {
         let text: String? = switch client.lastEntryPreview.preview {
         case .text(let text): text.text
@@ -110,15 +124,24 @@ struct Roster {
     }
 }
 
+/// A Bot with a card that waits for your answer, for "Waiting for you" on the Bot list.
+struct WaitingBot: Identifiable {
+    let entry: Roster.Entry
+    let card: ChatMessage
+    var id: String { entry.id }
+}
+
 extension Roster {
+    /// Every Bot that is not hidden: the pinned row, then the list.
+    var visible: [Entry] { pinned + sections.flatMap(\.entries) }
+
     func entry(for agentID: String) -> Entry? {
-        (sections.flatMap(\.entries) + hidden).first { $0.id == agentID }
+        (visible + hidden).first { $0.id == agentID }
     }
 
     /// Complication data: visible Bots with unread messages. Muted Bots are left out, as they are for notifications.
     var glance: Glance {
-        let visible = sections.flatMap(\.entries)
-        return Glance(
+        Glance(
             unreadBots: visible.filter { $0.unread > 0 && !$0.isMuted }
                 .map { Glance.UnreadBot(agentID: $0.id, name: $0.bot.displayParts.name, unread: $0.unread) },
             runningCount: visible.filter(\.isRunning).count

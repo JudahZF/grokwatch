@@ -3,7 +3,6 @@ import SwiftUI
 struct ChatView: View {
     @Environment(AppSession.self) private var session
     @State private var model: ChatModel
-    @State private var draft = ""
     @State private var actionsFor: ChatMessage?
     @State private var isCalling = false
 
@@ -14,7 +13,8 @@ struct ChatView: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: 6) {
+                // Not lazy: a page is 30 messages, and a lazy stack makes the jump to the end miss.
+                VStack(spacing: 6) {
                     if model.hasEarlier {
                         Button("Earlier messages") { Task { await model.loadEarlier() } }
                             .font(.footnote)
@@ -25,6 +25,10 @@ struct ChatView: View {
                         if let time = timeLabel(at: index) {
                             Text(time).font(.caption2).foregroundStyle(.secondary).padding(.top, 4)
                         }
+                        if let sender = senderLabel(at: index) {
+                            Text(sender).font(.caption2).foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading).padding(.leading, 8)
+                        }
                         MessageRow(message: message, model: model, onLongPress: { actionsFor = message })
                             .id(message.id)
                     }
@@ -34,31 +38,34 @@ struct ChatView: View {
                     if let status = model.status {
                         Text(status).font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     }
-                    // On watchOS, tapping a TextField opens dictation / Scribble / keyboard.
-                    TextField("Message", text: $draft)
-                        .submitLabel(.send)
-                        .onSubmit {
-                            let text = draft
-                            draft = ""
-                            Task { await model.send(text) }
-                        }
-                        .id("composer")
+                    Color.clear.frame(height: 1).id(Self.endID)
                 }
                 .animation(.snappy, value: model.activity)
             }
             .defaultScrollAnchor(.bottom)
-            .onChange(of: model.messages.last?.id) {
-                // An open card shows from its top, so its question is visible; anything else scrolls to the composer.
-                withAnimation {
+            .onChange(of: model.messages.last?.id) { previous, _ in
+                // An open card shows from its top, so its question is visible; anything else scrolls to the end.
+                let scroll = {
                     if let last = model.messages.last, last.needsAnswer {
                         proxy.scrollTo(last.id, anchor: .top)
                     } else {
-                        proxy.scrollTo("composer", anchor: .bottom)
+                        proxy.scrollTo(Self.endID, anchor: .bottom)
                     }
                 }
+                if previous == nil { scroll() } else { withAnimation(.default, scroll) }
             }
         }
-        .navigationTitle(model.bot.displayParts.name)
+        // Always on screen, as on the phone, so a reply never needs a scroll to the end of the chat.
+        .safeAreaInset(edge: .bottom, spacing: 2) {
+            Composer(bot: model.bot) { text in Task { await model.send(text) } }
+        }
+        .navigationTitle {
+            Label {
+                Text(model.bot.displayParts.name)
+            } icon: {
+                BotAvatar(bot: model.bot).frame(width: 18, height: 18)
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 if model.isWorking {
@@ -83,6 +90,14 @@ struct ChatView: View {
         #endif
     }
 
+    private static let endID = "end"
+
+    /// The writer's name, before the first message of each run by a group member or another person.
+    private func senderLabel(at index: Int) -> String? {
+        guard let sender = model.messages[index].sender else { return nil }
+        return index > 0 && model.messages[index - 1].sender == sender ? nil : sender
+    }
+
     /// A time header before the first message and after gaps of 20 minutes or more.
     private func timeLabel(at index: Int) -> String? {
         guard let date = model.messages[index].sentAt else { return nil }
@@ -105,6 +120,9 @@ private struct MessageRow: View {
             if !message.reactions.isEmpty {
                 Text(message.reactions.joined(separator: " ")).font(.caption2)
             }
+            if message.isFailed {
+                Text("Not sent · Tap to retry").font(.caption2).foregroundStyle(Theme.danger)
+            }
         }
         .frame(maxWidth: .infinity, alignment: alignment)
         .animation(.snappy, value: message)
@@ -122,17 +140,19 @@ private struct MessageRow: View {
     @ViewBuilder private var content: some View {
         switch message.content {
         case .text(let text):
-            Bubble(isMine: message.author == .me, isPending: message.isPending) {
+            Bubble(fill: myFill, isPending: message.isPending) {
                 MarkdownText(text)
                 if session.speaker.speakingID == message.id {
                     Image(systemName: "speaker.wave.2.fill").font(.caption2).symbolEffect(.variableColor)
                 }
             }
-            .onTapGesture { toggleSpeech() }
+            .onTapGesture {
+                if message.isFailed { Task { await model.retry(message) } } else { toggleSpeech() }
+            }
         case .image(let path, let caption):
             AttachmentImage(path: path, caption: caption, model: model)
         case .file(let name):
-            Bubble(isMine: message.author == .me, isPending: false) {
+            Bubble(fill: myFill, isPending: false) {
                 Label(name, systemImage: "doc").font(.footnote).lineLimit(2)
             }
         case .notice(let text):
@@ -150,6 +170,13 @@ private struct MessageRow: View {
         }
     }
 
+    /// The fill of your own bubble, or nil for a bubble from the Bot side.
+    private var myFill: BubbleFill? {
+        guard message.author == .me else { return nil }
+        if session.bubbleStyle == .botColor, let color = model.bot.color.bubble { return .colored(color) }
+        return .ink
+    }
+
     private func toggleSpeech() {
         guard message.author == .bot else { return }
         if session.speaker.speakingID == message.id {
@@ -160,18 +187,39 @@ private struct MessageRow: View {
     }
 }
 
+enum BubbleFill {
+    case ink
+    case colored(Color)
+}
+
+/// A chat bubble. Yours is ink, or the Bot's colour when that setting is on; the Bot side is grey.
 struct Bubble<Content: View>: View {
-    let isMine: Bool
+    /// Nil for a bubble from the Bot side.
+    let fill: BubbleFill?
     let isPending: Bool
     @ViewBuilder let content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) { content }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 9)
             .padding(.vertical, 6)
-            .background(isMine ? AnyShapeStyle(.tint) : AnyShapeStyle(.gray.opacity(0.25)), in: .rect(cornerRadius: 12))
+            .foregroundStyle(text)
+            .tint(text) // links take the text colour: the watch cannot open them
+            .background(background, in: .rect(cornerRadius: 15))
             .opacity(isPending ? 0.6 : 1)
-            .padding(isMine ? .leading : .trailing, 16)
+            .padding(fill == nil ? .trailing : .leading, 16)
+    }
+
+    private var background: Color {
+        switch fill {
+        case .ink: Theme.ink
+        case .colored(let color): color
+        case nil: Theme.surface
+        }
+    }
+
+    private var text: Color {
+        if case .ink = fill { Theme.onInk } else { .white }
     }
 }
 
@@ -238,6 +286,60 @@ private struct AttachmentImage: View {
 
     private var placeholder: some View {
         Label("Photo", systemImage: "photo").font(.footnote).foregroundStyle(.secondary)
+    }
+}
+
+/// The phone's composer, fitted to a watch: plus for a quick reply, the field for dictation, Scribble or the keyboard.
+private struct Composer: View {
+    let bot: Bot
+    let send: (String) -> Void
+    @State private var isShowingReplies = false
+
+    private static let quickReplies = ["Yes", "No", "Go ahead", "Not now", "Thanks"]
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Button { isShowingReplies = true } label: {
+                Image(systemName: "plus").font(.footnote.weight(.semibold))
+                    .frame(width: 32, height: 32)
+                    .background(Theme.control, in: Circle())
+            }
+            .accessibilityLabel("Quick replies")
+            TextFieldLink(prompt: Text("Ask \(bot.displayParts.name)")) {
+                HStack(spacing: 4) {
+                    Text("Ask \(bot.displayParts.name)").font(.footnote).foregroundStyle(.secondary).lineLimit(1)
+                    Spacer(minLength: 0)
+                    Image(systemName: "mic.fill").font(.caption2)
+                        .frame(width: 22, height: 22)
+                        .background(Theme.control, in: Circle())
+                }
+                .padding(.leading, 11)
+                .padding(.trailing, 5)
+                .frame(height: 32)
+                .background(Theme.control, in: Capsule())
+            } onSubmit: { text in
+                send(text)
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 6)
+        .background(.black)
+        .sheet(isPresented: $isShowingReplies) {
+            List {
+                // The Bot's own suggestions first, then short answers that fit most questions.
+                ForEach(bot.suggestions, id: \.id) { suggestion in
+                    Button(suggestion.title) { pick(suggestion.prompt) }
+                }
+                ForEach(Self.quickReplies, id: \.self) { reply in
+                    Button(reply) { pick(reply) }
+                }
+            }
+        }
+    }
+
+    private func pick(_ text: String) {
+        isShowingReplies = false
+        send(text)
     }
 }
 
