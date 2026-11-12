@@ -62,6 +62,16 @@ xcodebuild test -project watch/GrokWatch.xcodeproj -scheme GrokWatch -destinatio
 
 Under test the app shows an empty screen, so a test run makes no network request.
 
+## Demo mode
+
+A Debug build can run with a made-up account, so you can see the app without a login:
+
+```sh
+SIMCTL_CHILD_GROKWATCH_DEMO=1 xcrun simctl launch <sim-id> <your bundle id>
+```
+
+The Bot list and the chats show sample data from `GrokWatch/Demo.swift`. Nothing reaches the network, and the saved login is not read or changed. Messages, card answers and calls fail with a notice. `OPEN_BOT` (below) works here too. The screenshots in the top-level README come from this mode.
+
 ## Simulator testing (Debug builds only)
 
 ```sh

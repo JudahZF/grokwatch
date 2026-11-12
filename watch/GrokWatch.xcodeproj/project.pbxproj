@@ -44,6 +44,7 @@
 		CDF9995869471C9FF27F3C32 /* GrokWatchWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 786F130B234BDD0C4BB60F30 /* GrokWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D36BFDFC937D67C4EFC573EB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5F940B224EF8E8A5C10C5892 /* Assets.xcassets */; };
 		F1137FB149A65F524B1BC6C6 /* ChatCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 382C0252E712960B0D5C91C1 /* ChatCards.swift */; };
+		F4ADC00AFC4FF0B1D22BC583 /* Demo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 913E5B2D4186D3DE9A776874 /* Demo.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -99,6 +100,7 @@
 		799937A822640F4519C5E3C1 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		86C7B6152FFD0CBFA6CC4880 /* GrokWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GrokWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		90514971B4D9FE01F7D440B9 /* BotListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotListView.swift; sourceTree = "<group>"; };
+		913E5B2D4186D3DE9A776874 /* Demo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Demo.swift; sourceTree = "<group>"; };
 		924CFAB78D38252A55635CC2 /* GrokWatchTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GrokWatchTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		92828AF2A180B5668D9430BC /* GlanceWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlanceWidget.swift; sourceTree = "<group>"; };
 		9348C0DA031E470D74E204D9 /* AppSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSession.swift; sourceTree = "<group>"; };
@@ -198,6 +200,7 @@
 			isa = PBXGroup;
 			children = (
 				5F940B224EF8E8A5C10C5892 /* Assets.xcassets */,
+				913E5B2D4186D3DE9A776874 /* Demo.swift */,
 				790C21487F3A6291D2967913 /* GrokWatch.entitlements */,
 				F9FD3361BD9EFFD7CEEF0382 /* GrokWatchApp.swift */,
 				C964FB208516E5C942195A79 /* Info.plist */,
@@ -398,6 +401,7 @@
 				C1BC0AE3553CFD6A28F4B8A7 /* ChatModel.swift in Sources */,
 				764EB03FE593445A7E527246 /* ChatView.swift in Sources */,
 				73CFF5013C3C67DE2FE6405E /* Connect.swift in Sources */,
+				F4ADC00AFC4FF0B1D22BC583 /* Demo.swift in Sources */,
 				06CB7487C0EC43B1F09C958D /* Glance.swift in Sources */,
 				6A909F2FD4EAC06F013A7565 /* GrokBotAPI+Actions.swift in Sources */,
 				50A9C933309EE48B30686FB6 /* GrokBotAPI+Voice.swift in Sources */,

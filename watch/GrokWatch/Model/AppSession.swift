@@ -23,6 +23,12 @@ final class AppSession {
 
     init() {
         #if DEBUG
+        if Demo.isOn {
+            isSignedIn = true
+            auth = Auth(store: Demo.Store(), load: Demo.load)
+            api = GrokBotAPI(connect: ConnectClient(auth: auth, load: Demo.load, isDemo: true))
+            return
+        }
         Auth.seedFromEnvironment()
         #endif
         isSignedIn = Auth.hasSavedSession

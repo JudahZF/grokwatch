@@ -32,6 +32,10 @@ struct ConnectClient: Sendable {
 
     let auth: Auth
     var load: HTTPLoader = { try await URLSession.shared.data(for: $0) }
+    #if DEBUG
+    /// Demo mode (`Demo`): `load` gives canned replies, and a stream must stay off the network too.
+    var isDemo = false
+    #endif
 
     func unary<Response: Message>(_ method: String, _ request: some Message) async throws -> Response {
         let body = try request.serializedData()
@@ -49,7 +53,11 @@ struct ConnectClient: Sendable {
     func serverStream<Request: Message, Response: Message>(
         _ method: String, _ request: Request, of _: Response.Type = Response.self
     ) -> AsyncThrowingStream<Response, Error> {
-        AsyncThrowingStream { continuation in
+        #if DEBUG
+        // A silent stream: it yields nothing and stays open until the reader is cancelled.
+        if isDemo { return AsyncThrowingStream { _ in } }
+        #endif
+        return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
                     let body = Self.envelope(try request.serializedData())
