@@ -1,0 +1,25 @@
+# Builds the watch app and runs the unit tests on a watch simulator. No secrets, no signing.
+# The generated protobuf code needs Swift 6.2 or later, so the runner image must carry a matching
+# Xcode (macos-26 defaults to Xcode 26.6, Swift 6.2).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Xcode version
+        run: xcodebuild -version
+
+      - name: Build
+        run: xcodebuild -project watch/GrokWatch.xcodeproj -scheme GrokWatch -destination 'generic/platform=watchOS Simulator' -derivedDataPath /tmp/grokwatch-dd CODE_SIGNING_ALLOWED=NO build
+
+      - name: Test
+        run: |
+          SIM=$(xcrun simctl list devices available | grep -i 'Apple Watch' | head -1 | grep -oE '[0-9A-F-]{36}')
+          xcodebuild test -project watch/GrokWatch.xcodeproj -scheme GrokWatch -destination "platform=watchOS Simulator,id=$SIM" -derivedDataPath /tmp/grokwatch-dd
