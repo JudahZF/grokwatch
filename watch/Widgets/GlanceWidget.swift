@@ -12,7 +12,7 @@ struct GlanceWidget: Widget {
             GlanceView(glance: entry.glance)
                 .containerBackground(.clear, for: .widget)
         }
-        .configurationDisplayName("Grok Bot")
+        .configurationDisplayName("Grokwatch")
         .description("Unread Bot messages.")
         .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline, .accessoryCorner])
     }
@@ -65,11 +65,11 @@ struct GlanceView: View {
                 .font(.title3)
                 .widgetLabel(summary)
         case .accessoryInline:
-            Label("Grok Bot · \(summary)", systemImage: "bubble.left.fill")
+            Label("Grokwatch · \(summary)", systemImage: "bubble.left.fill")
         default:
             VStack(alignment: .leading, spacing: 1) {
                 HStack {
-                    Label("Grok Bot", systemImage: "bubble.left.fill").font(.headline).widgetAccentable()
+                    Label("Grokwatch", systemImage: "bubble.left.fill").font(.headline).widgetAccentable()
                     Spacer()
                     if let running = glance?.runningCount, running > 0 {
                         Image(systemName: "ellipsis").accessibilityLabel("\(running) working")
