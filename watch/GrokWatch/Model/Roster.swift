@@ -33,8 +33,6 @@ struct Roster {
     /// The Bots below the pinned row.
     var sections: [Section] = []
     var hidden: [Entry] = []
-    /// Pinned Bot ids in pin order, for pin and unpin.
-    var pinnedIDs: [String] = []
 
     /// Section id the desktop uses for "every Bot not in another section".
     private static let restSectionID = "__agents__"
@@ -71,7 +69,6 @@ struct Roster {
         let visible = byRecency.filter { !isHidden($0) }
         let visibleByID = Dictionary(visible.map { ($0.agentID, $0) }) { first, _ in first }
 
-        self.pinnedIDs = pinnedIDs
         pinned = pinnedIDs.compactMap { visibleByID[$0] }.map(entry)
         let unpinned = visible.filter { !pinnedIDs.contains($0.agentID) }
 
