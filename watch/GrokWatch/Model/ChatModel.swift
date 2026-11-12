@@ -31,21 +31,30 @@ final class ChatModel {
 
     /// Follows the Bot until the view goes away. Reconnects after drops; reloads history when the server says so.
     func run() async {
+        var failures = 0
         while !Task.isCancelled {
             do {
                 if needsReload { try await reload() }
                 status = nil
-                markRead()
+                var isFirstFrame = true
                 for try await frame in session.api.watch(bot, generation: generation, after: cursor) {
+                    if isFirstFrame {
+                        isFirstFrame = false
+                        failures = 0
+                        markRead()
+                    }
                     guard apply(frame) else { break }
                 }
             } catch is CancellationError {
                 return
+            } catch let error as URLError where error.code == .timedOut {
+                // The stream went idle (no heartbeat): reconnect quietly.
             } catch {
                 if Task.isCancelled { return }
                 status = session.describe(error)
+                failures += 1
             }
-            try? await Task.sleep(for: .seconds(3))
+            try? await Task.sleep(for: ConnectClient.reconnectDelay(afterFailures: failures))
         }
     }
 

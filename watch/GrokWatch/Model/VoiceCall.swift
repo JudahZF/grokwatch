@@ -280,6 +280,7 @@ final class VoiceCall {
             var seen: Set<String> = []
             var head: Aiserver_V1_ListGrokBotTranscriptEntriesResponse?
             var cursor: UInt64 = 0
+            var failures = 0
             while !Task.isCancelled {
                 do {
                     if head == nil {
@@ -288,6 +289,7 @@ final class VoiceCall {
                         cursor = page.entries.map(\.updatedSeq).max() ?? 0
                     }
                     stream: for try await frame in api.watch(bot, generation: head?.generation ?? 0, after: cursor) {
+                        failures = 0
                         switch frame.frame {
                         case .rows(let rows):
                             for entry in rows.entries {
@@ -303,8 +305,12 @@ final class VoiceCall {
                             break
                         }
                     }
-                } catch {}
-                try? await Task.sleep(for: .seconds(2))
+                } catch let error as URLError where error.code == .timedOut {
+                    // The stream went idle (no heartbeat): a normal reconnect.
+                } catch {
+                    failures += 1
+                }
+                try? await Task.sleep(for: ConnectClient.reconnectDelay(afterFailures: failures))
             }
         })
     }

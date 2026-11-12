@@ -12,6 +12,12 @@ struct ConnectClient: Sendable {
     /// The service's heartbeat interval is not documented; raise this if idle chats reconnect every two minutes.
     static let streamIdleTimeout: TimeInterval = 120
 
+    /// How long to wait before a stream reconnects after `failures` failed attempts in a row:
+    /// 3, 6, 12, 24, 48, then 60 s. Zero failures (a normal reconnect) also waits 3 s.
+    static func reconnectDelay(afterFailures failures: Int) -> Duration {
+        .seconds(min(60, 3 << min(max(failures, 1) - 1, 5)))
+    }
+
     struct RPCError: LocalizedError {
         let code: String
         let message: String
