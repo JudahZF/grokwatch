@@ -40,7 +40,8 @@ struct ChatView: View {
                     if let status = model.status {
                         Text(status).font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     }
-                    Color.clear.frame(height: 1).id(Self.endID)
+                    // Keeps the end of the chat above the strong part of the composer's fade.
+                    Color.clear.frame(height: 8).id(Self.endID)
                 }
                 .animation(.snappy, value: model.activity)
             }
@@ -307,6 +308,7 @@ private struct Composer: View {
     @State private var isShowingReplies = false
 
     private static let quickReplies = ["Yes", "No", "Go ahead", "Not now", "Thanks"]
+    private static let fadeHeight: CGFloat = 16
 
     var body: some View {
         HStack(spacing: 5) {
@@ -335,6 +337,13 @@ private struct Composer: View {
         .buttonStyle(.plain)
         .padding(.horizontal, 6)
         .background(.black)
+        // The chat fades out above the field, so a message does not end at a hard edge.
+        .overlay(alignment: .top) {
+            LinearGradient(colors: [.black.opacity(0), .black], startPoint: .top, endPoint: .bottom)
+                .frame(height: Self.fadeHeight)
+                .offset(y: -Self.fadeHeight)
+                .allowsHitTesting(false)
+        }
         .sheet(isPresented: $isShowingReplies) {
             List {
                 // The Bot's own suggestions first, then short answers that fit most questions.
