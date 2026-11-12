@@ -14,9 +14,10 @@ struct Glance: Codable, Equatable {
 
     var totalUnread: UInt32 { unreadBots.reduce(0) { $0 + $1.unread } }
 
-    static let appGroup = "group.com.example.grokwatch"
+    /// From Info.plist (`AppGroupID`, set by Signing.xcconfig), so the app and the widget always name the same store.
+    static let appGroup = Bundle.main.object(forInfoDictionaryKey: "AppGroupID") as? String
     private static let key = "glance"
-    private static var defaults: UserDefaults? { UserDefaults(suiteName: appGroup) }
+    private static var defaults: UserDefaults? { appGroup.flatMap(UserDefaults.init(suiteName:)) }
 
     static func load() -> Glance? {
         defaults?.data(forKey: key).flatMap { try? JSONDecoder().decode(Glance.self, from: $0) }

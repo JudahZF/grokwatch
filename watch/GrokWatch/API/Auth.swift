@@ -167,7 +167,8 @@ private enum Keychain {
     private static var query: [CFString: Any] {
         [
             kSecClass: kSecClassGenericPassword,
-            kSecAttrService: "com.example.grokwatch",
+            // The bundle id, so each signing identity keeps its own item.
+            kSecAttrService: Bundle.main.bundleIdentifier ?? "grokwatch",
             kSecAttrAccount: "cursor-tokens",
         ]
     }

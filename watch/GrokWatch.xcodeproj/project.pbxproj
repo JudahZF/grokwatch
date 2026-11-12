@@ -67,6 +67,7 @@
 		046647C827020F03E008F36A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		05D90BC25A4D01AC379131AD /* CallAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallAudio.swift; sourceTree = "<group>"; };
 		085393055E6029800C0C652A /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		122E7147154D364B2333FDA3 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 		1793FA5ED6256F936D5FF141 /* GrokBotAPI+Voice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GrokBotAPI+Voice.swift"; sourceTree = "<group>"; };
 		2A42623C3AD418B9F8DD9CFE /* GrokBotAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokBotAPI.swift; sourceTree = "<group>"; };
 		382C0252E712960B0D5C91C1 /* ChatCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatCards.swift; sourceTree = "<group>"; };
@@ -116,6 +117,7 @@
 			children = (
 				54315EBD5927AE7075483647 /* GrokWatch */,
 				8E4C4CEE3B4174989BFB6DA5 /* Shared */,
+				7AABC9AF67E56C4B647D64E0 /* watch */,
 				47CB6488FF58EB8CF2D701D1 /* Widgets */,
 				22C30387210E8E9EEDC5D06A /* Products */,
 			);
@@ -181,6 +183,15 @@
 				1A652DF492BFD859892FC8E6 /* Views */,
 			);
 			path = GrokWatch;
+			sourceTree = "<group>";
+		};
+		7AABC9AF67E56C4B647D64E0 /* watch */ = {
+			isa = PBXGroup;
+			children = (
+				122E7147154D364B2333FDA3 /* Signing.xcconfig */,
+			);
+			name = watch;
+			path = .;
 			sourceTree = "<group>";
 		};
 		8E4C4CEE3B4174989BFB6DA5 /* Shared */ = {
@@ -369,7 +380,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = GrokWatch/GrokWatch.entitlements;
 				INFOPLIST_FILE = GrokWatch/Info.plist;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.grokwatch;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = 4;
@@ -378,6 +389,7 @@
 		};
 		19185B2B35E895CFCE968DBB /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 122E7147154D364B2333FDA3 /* Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -412,7 +424,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -443,6 +454,7 @@
 		};
 		2EE400928C1EAB5E48052A14 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 122E7147154D364B2333FDA3 /* Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -477,7 +489,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -509,7 +520,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.grokwatch.widgets;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID).widgets";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = 4;
@@ -526,7 +537,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.grokwatch.widgets;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID).widgets";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = 4;
@@ -540,7 +551,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = GrokWatch/GrokWatch.entitlements;
 				INFOPLIST_FILE = GrokWatch/Info.plist;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.grokwatch;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = 4;
