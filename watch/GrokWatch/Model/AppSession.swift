@@ -90,9 +90,9 @@ final class AppSession {
     static let refreshID = "glance"
 
     /// User-facing text for an error. A dead session sends the user back to login.
+    /// Only `Auth` decides that a session is dead: `ConnectClient` already refreshed and retried once on a rejected token.
     func describe(_ error: Error) -> String {
         if case Auth.AuthError.signedOut = error { isSignedIn = false }
-        if let rpc = error as? ConnectClient.RPCError, rpc.code == "unauthenticated" { signOut() }
         return error.localizedDescription
     }
 }

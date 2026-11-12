@@ -36,16 +36,23 @@ actor Auth {
     private static let website = URL(string: "https://cursor.com")!
 
     nonisolated let machineID: String
+    private let tokenStore: any TokenStore
+    private let session: URLSession
     private var tokens: Tokens?
     private var refreshing: Task<String, Error>?
+    /// Grows on each sign-out, so a refresh that was in flight knows to drop its result.
+    private var signOuts = 0
 
-    init() {
-        tokens = Keychain.read(Tokens.self)
+    /// `store` and `session` are seams for tests; the app uses the defaults.
+    init(store: any TokenStore = Keychain(), session: URLSession = .shared) {
+        tokenStore = store
+        self.session = session
+        tokens = tokenStore.load()
         machineID = Self.loadMachineID()
     }
 
     /// Synchronous check for app launch, before any actor hop.
-    nonisolated static var hasSavedSession: Bool { Keychain.read(Tokens.self) != nil }
+    nonisolated static var hasSavedSession: Bool { Keychain().load() != nil }
 
     #if DEBUG
     /// Simulator testing without the QR flow:
@@ -53,7 +60,7 @@ actor Auth {
     nonisolated static func seedFromEnvironment() {
         guard let seed = ProcessInfo.processInfo.environment["GROKWATCH_SEED_TOKENS"],
               let tokens = try? JSONDecoder().decode(Tokens.self, from: Data(seed.utf8)) else { return }
-        Keychain.write(tokens)
+        Keychain().save(tokens)
     }
     #endif
 
@@ -81,7 +88,7 @@ actor Auth {
             try await Task.sleep(for: .seconds(2))
             let data: Data, status: Int
             do {
-                let (body, response) = try await URLSession.shared.data(from: components.url!)
+                let (body, response) = try await session.data(from: components.url!)
                 (data, status) = (body, (response as? HTTPURLResponse)?.statusCode ?? 0)
             } catch is URLError {
                 continue // flaky watch network; keep polling
@@ -100,16 +107,31 @@ actor Auth {
         if let expiry = Self.expiry(of: tokens.accessToken), expiry.timeIntervalSinceNow > 300 {
             return tokens.accessToken
         }
+        return try await refreshOnce()
+    }
+
+    /// A new access token after the server rejected `rejected`.
+    /// When another call already replaced that token, returns the stored one without a new refresh.
+    func accessToken(replacing rejected: String) async throws -> String {
+        guard let tokens else { throw AuthError.signedOut }
+        guard tokens.accessToken == rejected else { return tokens.accessToken }
+        return try await refreshOnce()
+    }
+
+    func signOut() {
+        signOuts += 1
+        tokens = nil
+        tokenStore.clear()
+    }
+
+    /// Joins the refresh in flight or starts one. Refresh tokens rotate, so two refreshes with one token would end the session.
+    private func refreshOnce() async throws -> String {
         if let refreshing { return try await refreshing.value }
+        guard let tokens else { throw AuthError.signedOut }
         let task = Task { try await refresh(using: tokens.refreshToken) }
         refreshing = task
         defer { refreshing = nil }
         return try await task.value
-    }
-
-    func signOut() {
-        tokens = nil
-        Keychain.delete()
     }
 
     private func refresh(using refreshToken: String) async throws -> String {
@@ -127,7 +149,10 @@ actor Auth {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "content-type")
         request.httpBody = try JSONEncoder().encode(Body(client_id: Self.clientID, refresh_token: refreshToken))
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let signOutsBefore = signOuts
+        let (data, response) = try await session.data(for: request)
+        // A sign-out while the request was out wins: storing the new pair would sign the user back in.
+        guard signOuts == signOutsBefore else { throw AuthError.signedOut }
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         let reply = try? JSONDecoder().decode(Reply.self, from: data)
         if reply?.shouldLogout == true || status == 401 || status == 403 {
@@ -141,7 +166,7 @@ actor Auth {
 
     private func store(_ new: Tokens) {
         tokens = new
-        Keychain.write(new)
+        tokenStore.save(new)
     }
 
     private static func expiry(of jwt: String) -> Date? {
@@ -162,9 +187,16 @@ actor Auth {
     }
 }
 
+/// Where `Auth` keeps the token pair: the Keychain in the app, memory in tests.
+protocol TokenStore: Sendable {
+    func load() -> Auth.Tokens?
+    func save(_ tokens: Auth.Tokens)
+    func clear()
+}
+
 /// One Keychain item holding the token pair as JSON.
-private enum Keychain {
-    private static var query: [CFString: Any] {
+struct Keychain: TokenStore {
+    private var query: [CFString: Any] {
         [
             kSecClass: kSecClassGenericPassword,
             // The bundle id, so each signing identity keeps its own item.
@@ -173,24 +205,26 @@ private enum Keychain {
         ]
     }
 
-    static func read<T: Decodable>(_: T.Type) -> T? {
+    func load() -> Auth.Tokens? {
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query.merging([kSecReturnData: true]) { $1 } as CFDictionary, &result)
         guard status == errSecSuccess, let data = result as? Data else { return nil }
-        return try? JSONDecoder().decode(T.self, from: data)
+        return try? JSONDecoder().decode(Auth.Tokens.self, from: data)
     }
 
-    static func write(_ value: some Encodable) {
-        guard let data = try? JSONEncoder().encode(value) else { return }
-        delete()
-        let attributes = query.merging([
+    /// Updates the item in place, so a failed write never leaves the watch without its pair.
+    func save(_ tokens: Auth.Tokens) {
+        guard let data = try? JSONEncoder().encode(tokens) else { return }
+        let attributes: [CFString: Any] = [
             kSecValueData: data,
             kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-        ]) { $1 }
-        SecItemAdd(attributes as CFDictionary, nil)
+        ]
+        if SecItemUpdate(query as CFDictionary, attributes as CFDictionary) == errSecItemNotFound {
+            SecItemAdd(query.merging(attributes) { $1 } as CFDictionary, nil)
+        }
     }
 
-    static func delete() {
+    func clear() {
         SecItemDelete(query as CFDictionary)
     }
 }

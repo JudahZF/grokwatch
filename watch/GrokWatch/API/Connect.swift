@@ -8,23 +8,31 @@ struct ConnectClient: Sendable {
     static let baseURL = URL(string: "https://api2.cursor.sh")!
     /// Desktop app version whose protocol this client mirrors.
     static let clientVersion = "0.78.1"
+    /// URLSession's idle timeout for a stream: it fires only when no bytes arrive for this long, and heartbeats count.
+    /// The service's heartbeat interval is not documented; raise this if idle chats reconnect every two minutes.
+    static let streamIdleTimeout: TimeInterval = 120
 
     struct RPCError: LocalizedError {
         let code: String
         let message: String
         var errorDescription: String? { message.isEmpty ? code : "\(code): \(message)" }
+        /// The server refused the access token (not the account), so a refreshed token may work.
+        var rejectsToken: Bool { code == "unauthenticated" || code == "http_401" }
     }
 
     let auth: Auth
     var session: URLSession = .shared
 
     func unary<Response: Message>(_ method: String, _ request: some Message) async throws -> Response {
-        var urlRequest = try await makeRequest(method, contentType: "application/proto")
-        urlRequest.httpBody = try request.serializedData()
-        let (data, response) = try await session.data(for: urlRequest)
-        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-        guard status == 200 else { throw Self.error(from: data, status: status) }
-        return try Response(serializedBytes: data)
+        let body = try request.serializedData()
+        return try await authorized { token in
+            var urlRequest = makeRequest(method, contentType: "application/proto", token: token)
+            urlRequest.httpBody = body
+            let (data, response) = try await session.data(for: urlRequest)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            guard status == 200 else { throw Self.error(from: data, status: status) }
+            return try Response(serializedBytes: data)
+        }
     }
 
     /// Server-streaming call. Frames are `[flags: 1][length: 4 BE][payload]`; flag 0x02 marks the end-of-stream trailer.
@@ -34,15 +42,20 @@ struct ConnectClient: Sendable {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    var urlRequest = try await makeRequest(method, contentType: "application/connect+proto")
-                    urlRequest.timeoutInterval = 60 * 60
-                    urlRequest.httpBody = Self.envelope(try request.serializedData())
-                    let (bytes, response) = try await session.bytes(for: urlRequest)
-                    let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-                    guard status == 200 else {
-                        var body = Data()
-                        for try await byte in bytes { body.append(byte) }
-                        throw Self.error(from: body, status: status)
+                    let body = Self.envelope(try request.serializedData())
+                    // The retry covers only the status check: no frame has been delivered yet.
+                    let bytes = try await authorized { token in
+                        var urlRequest = makeRequest(method, contentType: "application/connect+proto", token: token)
+                        urlRequest.timeoutInterval = Self.streamIdleTimeout
+                        urlRequest.httpBody = body
+                        let (bytes, response) = try await session.bytes(for: urlRequest)
+                        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+                        guard status == 200 else {
+                            var errorBody = Data()
+                            for try await byte in bytes { errorBody.append(byte) }
+                            throw Self.error(from: errorBody, status: status)
+                        }
+                        return bytes
                     }
                     var buffer = Data()
                     for try await byte in bytes {
@@ -65,8 +78,17 @@ struct ConnectClient: Sendable {
         }
     }
 
-    private func makeRequest(_ method: String, contentType: String) async throws -> URLRequest {
+    /// Runs `call` with the access token. When the server rejects that token, refreshes it and runs `call` once more.
+    private func authorized<Result>(_ call: (String) async throws -> Result) async throws -> Result {
         let token = try await auth.accessToken()
+        do {
+            return try await call(token)
+        } catch let error as RPCError where error.rejectsToken {
+            return try await call(try await auth.accessToken(replacing: token))
+        }
+    }
+
+    private func makeRequest(_ method: String, contentType: String, token: String) -> URLRequest {
         var request = URLRequest(url: Self.baseURL.appending(path: method))
         request.httpMethod = "POST"
         for (field, value) in [
